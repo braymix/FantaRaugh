@@ -6,11 +6,12 @@
 
 import { BALANCE } from '@content/balance';
 import { STATUS_MAP } from '@content/statuses';
+import { typeEffectiveness } from '@content/typechart';
 import type { BaseStats, Effect, Registry, Role, Row, Side, Unit } from './types';
 import { ENGINE_CONFIG } from '@content/registry';
 
 export function testRegistry(): Registry {
-  return { statuses: STATUS_MAP, config: ENGINE_CONFIG };
+  return { statuses: STATUS_MAP, config: ENGINE_CONFIG, effectiveness: typeEffectiveness };
 }
 
 export { BALANCE };
@@ -47,6 +48,7 @@ export function makeUnit(
     defId: overrides.defId ?? uid,
     name: overrides.name ?? uid,
     role: overrides.role ?? 'blade',
+    types: overrides.types ?? ['acciaio'],
     side: overrides.side,
     row: overrides.row ?? 'front',
     slot: overrides.slot ?? counter,

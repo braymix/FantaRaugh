@@ -60,6 +60,7 @@ function snapshot(unit: Unit, registry: Registry): UnitSnapshot {
     defId: unit.defId,
     name: unit.name,
     role: unit.role,
+    types: unit.types,
     side: unit.side,
     row: unit.row,
     hp: Math.max(0, Math.round(unit.hp)),
@@ -133,6 +134,38 @@ function recordDamage(ctx: Ctx, source: Unit, target: Unit, amount: number): voi
   ctx.stats.damageTakenByUid[target.uid] = (ctx.stats.damageTakenByUid[target.uid] ?? 0) + amount;
 }
 
+// --- Anti-stall -----------------------------------------------------------
+
+/**
+ * Oltre una certa durata il combattimento accelera: i danni crescono. Serve a
+ * impedire strategie di puro stallo e a tenere il ritmo (come in Pokelike).
+ */
+function stallMult(ctx: Ctx): number {
+  const cfg = ctx.registry.config;
+  return ctx.state.turn >= cfg.stallSpeedUpTurn ? cfg.stallDamageMult : 1;
+}
+
+/**
+ * Overtime: superata la soglia, ogni turno tutte le unità perdono una frazione
+ * degli HP massimi. Chiude i fight che l'accelerazione non basta a risolvere.
+ */
+function applyOvertime(ctx: Ctx): void {
+  const cfg = ctx.registry.config;
+  const pct = cfg.overtimeDamagePct;
+  const hits: { uid: string; amount: number; hpAfter: number }[] = [];
+  for (const u of ctx.state.units) {
+    if (!u.alive) continue;
+    const amount = Math.max(1, Math.round(u.base.maxHp * pct));
+    applyRawDamage(u, amount);
+    hits.push({ uid: u.uid, amount, hpAfter: Math.max(0, Math.round(u.hp)) });
+  }
+  log(ctx, { t: 'overtime', turn: ctx.state.turn, damagePct: pct, hits });
+  // Le morti da overtime si risolvono dopo aver registrato l'evento.
+  for (const u of [...ctx.state.units]) {
+    if (u.alive && u.hp <= 0) handleDeath(ctx, u, null);
+  }
+}
+
 // --- Morte -----------------------------------------------------------------
 
 function handleDeath(ctx: Ctx, dead: Unit, killer: Unit | null): void {
@@ -161,10 +194,32 @@ function applyAction(ctx: Ctx, source: Unit, action: Action, targets: Unit[]): v
         if (target.alive && source.alive) fireTrigger(ctx, 'onBeforeDefend', target, source);
         for (let h = 0; h < hits; h++) {
           if (!target.alive || !source.alive) break;
-          const roll = computeDamage(source, target, action, ctx.rng, registry);
+          const roll = computeDamage(
+            source,
+            target,
+            { ...action, globalMult: stallMult(ctx) },
+            ctx.rng,
+            registry,
+          );
           if (!roll.hit) {
             log(ctx, { t: 'miss', source: source.uid, target: target.uid });
             continue;
+          }
+          if (roll.effectiveness === 0) {
+            log(ctx, {
+              t: 'damage',
+              source: source.uid,
+              target: target.uid,
+              amount: 0,
+              crit: false,
+              damageType: action.damageType,
+              element: roll.element,
+              effectiveness: 0,
+              tags: action.tags ?? [],
+              absorbed: 0,
+              hpAfter: Math.max(0, Math.round(target.hp)),
+            });
+            continue; // immune: nessun danno e nessun trigger
           }
           const { absorbed } = applyRawDamage(target, roll.amount);
           recordDamage(ctx, source, target, roll.amount);
@@ -176,6 +231,8 @@ function applyAction(ctx: Ctx, source: Unit, action: Action, targets: Unit[]): v
             amount: roll.amount,
             crit: roll.crit,
             damageType: action.damageType,
+            element: roll.element,
+            effectiveness: roll.effectiveness,
             tags: action.tags ?? [],
             absorbed,
             hpAfter: Math.max(0, Math.round(target.hp)),
@@ -478,6 +535,12 @@ function executeTurn(ctx: Ctx, actor: Unit): void {
     .filter((u) => u.alive)
     .map((u) => ({ uid: u.uid, gauge: Math.round(u.gauge) }));
   log(ctx, { t: 'turnStart', uid: actor.uid, gauge: Math.round(actor.gauge), turn: ctx.state.turn, gauges });
+
+  if (ctx.state.turn >= ctx.registry.config.overtimeTurn) applyOvertime(ctx);
+  if (!actor.alive) {
+    actor.gauge -= ctx.registry.config.actionThreshold;
+    return;
+  }
 
   statusTicks(ctx, actor);
   if (!actor.alive) {

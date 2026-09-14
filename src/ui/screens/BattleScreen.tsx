@@ -7,22 +7,23 @@
 
 import { useState } from 'react';
 import { BALANCE } from '@content/balance';
+import { CREATURE_MAP } from '@content/creatures';
 import { useGame } from '@state/store';
 import { BattleUnit } from '../components/BattleUnit';
 import { HelpSheet } from '../components/HelpSheet';
 import { Sprite } from '../components/Sprite';
 import { useReplay, type Speed } from '../battle/useReplay';
 import type { DisplayUnit } from '../battle/replay';
+import { TypeRow } from '../components/TypeBadge';
 import { ROLE_META, statusIcon } from '../format';
 
 const SPEEDS: Speed[] = [1, 2, 4];
 
 export function BattleScreen() {
   const battle = useGame((s) => s.lastBattle);
-  const reward = useGame((s) => s.lastReward);
+  const summary = useGame((s) => s.lastSummary);
   const run = useGame((s) => s.profile.run);
   const navigate = useGame((s) => s.navigate);
-  const newDungeon = useGame((s) => s.newDungeon);
 
   const [inspect, setInspect] = useState<DisplayUnit | null>(null);
   const [help, setHelp] = useState(false);
@@ -87,7 +88,7 @@ export function BattleScreen() {
         </div>
       </div>
       {/* Banner abilità + log (in basso: assorbe lo spazio residuo) */}
-      <div className="mx-2 mb-2 flex min-h-0 flex-1 flex-col border-2 border-black/40 bg-black/35">
+      <div className="mx-2 mb-2 flex max-h-52 min-h-0 flex-1 flex-col border-2 border-black/40 bg-black/35">
         {ability && (
           <div
             key={ability.id}
@@ -148,6 +149,9 @@ export function BattleScreen() {
                   {ROLE_META[inspect.role].icon} {ROLE_META[inspect.role].label} ·{' '}
                   {inspect.row === 'front' ? 'prima linea' : 'retrovia'}
                 </div>
+                <div className="mt-0.5">
+                  <TypeRow types={inspect.types} small />
+                </div>
                 <div className="text-[11px] text-white/55">
                   {inspect.hp}/{inspect.maxHp} HP
                   {inspect.shield > 0 && <span className="text-sky-300"> · ◈{inspect.shield} scudo</span>}
@@ -189,34 +193,31 @@ export function BattleScreen() {
             <div className="mb-2 font-display text-2xl">
               {won ? '🏆 Vittoria' : display.winner === 'enemy' ? '💀 Sconfitta' : '⏳ Pareggio'}
             </div>
-            {reward && (reward.xp > 0 || reward.gold > 0 || reward.gems > 0) && (
+            {summary && (
               <div className="mb-3 space-y-0.5 text-sm text-white/70">
-                {!won && <div className="text-white/45">La squadra impara dalla sconfitta:</div>}
-                {reward.xp > 0 && <div>+{reward.xp} XP alla squadra</div>}
-                {reward.gold > 0 && <div className="text-gold">+{reward.gold} oro</div>}
-                {reward.gems > 0 && <div className="text-fuchsia-300">+{reward.gems} gemme</div>}
-                {reward.newWeapon && <div className="text-sky-300">Nuova arma: {reward.newWeapon}</div>}
-                {reward.newPerk && <div className="text-violet-300">Nuovo perk: {reward.newPerk}</div>}
+                {!won && <div className="text-white/45">Il viaggio finisce qui, ma resta l'esperienza:</div>}
+                {summary.xp > 0 && <div>+{Math.round(summary.xp)} XP alla squadra</div>}
+                {summary.essence > 0 && <div className="text-gold">+{summary.essence} ✦ essenze</div>}
+                {summary.evolved.map((e) => (
+                  <div key={e.uid} className="text-sky-300">
+                    {CREATURE_MAP[e.from]?.name ?? e.from} evolve in {CREATURE_MAP[e.to]?.name ?? e.to}!
+                  </div>
+                ))}
               </div>
             )}
             <div className="mb-3 text-xs text-white/40">Durata: {battle.stats.turns} turni</div>
             {won && runActive ? (
-              <button className="btn-primary w-full" onClick={() => navigate('dungeon')}>
-                Continua il dungeon
+              <button className="btn-primary w-full" onClick={() => navigate('map')}>
+                Avanti
               </button>
             ) : won ? (
               <button className="btn-primary w-full" onClick={() => navigate('home')}>
-                Dungeon completato! Torna alla base
+                🏆 Campione! Torna alla base
               </button>
             ) : (
               <div className="flex flex-col gap-2">
-                <button
-                  className="btn-primary w-full"
-                  onClick={() => {
-                    if (!newDungeon()) navigate('home');
-                  }}
-                >
-                  Riprova (più forti di prima)
+                <button className="btn-primary w-full" onClick={() => navigate('starter')}>
+                  Nuova run (più forti di prima)
                 </button>
                 <button className="btn-ghost w-full" onClick={() => navigate('home')}>
                   Torna alla base

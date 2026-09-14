@@ -1,6 +1,20 @@
 /** Etichette, colori e icone per ruoli/rarità. Solo presentazione. */
 
-import type { Rarity, Role } from '@engine/types';
+import type { MonType, Rarity, Role } from '@engine/types';
+
+/** Etichette e colori dei tipi elementali. */
+export const TYPE_META: Record<MonType, { label: string; color: string; bg: string }> = {
+  fuoco: { label: 'Fuoco', color: 'text-orange-200', bg: 'bg-orange-900/60 border-orange-600/60' },
+  acqua: { label: 'Acqua', color: 'text-sky-200', bg: 'bg-sky-900/60 border-sky-600/60' },
+  natura: { label: 'Natura', color: 'text-lime-200', bg: 'bg-lime-900/60 border-lime-600/60' },
+  fulmine: { label: 'Fulmine', color: 'text-yellow-100', bg: 'bg-yellow-800/60 border-yellow-500/60' },
+  ghiaccio: { label: 'Ghiaccio', color: 'text-cyan-100', bg: 'bg-cyan-900/60 border-cyan-500/60' },
+  roccia: { label: 'Roccia', color: 'text-amber-100', bg: 'bg-amber-900/60 border-amber-700/60' },
+  ombra: { label: 'Ombra', color: 'text-fuchsia-200', bg: 'bg-fuchsia-950/70 border-fuchsia-700/60' },
+  luce: { label: 'Luce', color: 'text-yellow-50', bg: 'bg-amber-800/50 border-amber-300/50' },
+  acciaio: { label: 'Acciaio', color: 'text-slate-100', bg: 'bg-slate-700/60 border-slate-400/60' },
+  veleno: { label: 'Veleno', color: 'text-violet-200', bg: 'bg-violet-950/70 border-violet-600/60' },
+};
 
 export const ROLE_META: Record<Role, { label: string; icon: string; color: string }> = {
   healer: { label: 'Curatore', icon: '✚', color: 'text-emerald-300' },

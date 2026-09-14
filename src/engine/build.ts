@@ -15,6 +15,9 @@ const GENERIC_BASIC: Effect = {
   actions: [{ kind: 'damage', power: 1.0, damageType: 'physical', tags: ['physical'] }],
 };
 
+/** Statistiche intere: arrotondate, così non compaiono mai HP frazionari. */
+const INTEGER_STATS: (keyof BaseStats)[] = ['maxHp', 'atk', 'def', 'speed', 'resistance', 'energyMax'];
+
 export function levelStats(base: BaseStats, growth: GrowthCurve, level: number): BaseStats {
   const out: BaseStats = { ...base };
   const steps = Math.max(0, level - 1);
@@ -22,6 +25,7 @@ export function levelStats(base: BaseStats, growth: GrowthCurve, level: number):
     const inc = growth.perLevel[key] ?? 0;
     out[key] = base[key] + inc * steps;
   }
+  for (const key of INTEGER_STATS) out[key] = Math.round(out[key]);
   return out;
 }
 
@@ -39,6 +43,7 @@ function instantiate(def: UnitDef, side: Side, slot: number, level: number, row:
     defId: def.id,
     name: def.name,
     role: def.role,
+    types: def.types,
     side,
     row,
     slot: side === 'player' ? slot : 100 + slot, // i nemici dopo i giocatori nel tie-break

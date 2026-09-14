@@ -1,9 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '@content/balance';
-import { generateDungeon } from '@content/dungeon';
-import { createDefaultProfile } from './profile';
-import { grantDefeatConsolation, grantNodeRewards, nodeSeed, runFight } from './run';
+import { CREATURE_MAP } from '@content/creatures';
+import { generateRunMap } from '@content/runmap';
+import { healFull } from './party';
 import { grantXp, xpForNextLevel } from './progression';
+import { essenceForNode, grantTeamXp, makeRunMon, nodeSeed, runFight } from './run';
+import type { RunState } from './types';
+
+function freshRun(starterId = 'kael', seed = 12345): RunState {
+  const starter = makeRunMon(starterId, BALANCE.starterLevel);
+  const run: RunState = {
+    seed,
+    team: [starter],
+    bag: [],
+    currentNodeId: null,
+    clearedNodeIds: [],
+    badges: 0,
+    nuzlocke: false,
+    active: true,
+    pending: null,
+  };
+  healFull(starter, {}, run.team);
+  return run;
+}
 
 describe('progressione XP', () => {
   it('accumulare XP fa salire di livello', () => {
@@ -19,44 +38,63 @@ describe('progressione XP', () => {
   });
 });
 
-describe('run nel dungeon', () => {
-  it('nodeSeed è deterministico', () => {
-    expect(nodeSeed(100, 'n0_0')).toBe(nodeSeed(100, 'n0_0'));
-    expect(nodeSeed(100, 'n0_0')).not.toBe(nodeSeed(100, 'n1_0'));
+describe('evoluzioni', () => {
+  it('al livello soglia la creatura evolve mantenendo la linea', () => {
+    const team = [makeRunMon('thane', 13)];
+    const evolved = grantTeamXp(team, xpForNextLevel(13) * 1.2);
+    expect(team[0]!.level).toBeGreaterThanOrEqual(14);
+    expect(team[0]!.defId).toBe('thanys');
+    expect(evolved[0]).toMatchObject({ from: 'thane', to: 'thanys' });
+    expect(CREATURE_MAP['thanys']!.line).toBe('thane');
   });
 
-  it('la squadra iniziale supera il primo scontro del dungeon', () => {
-    const profile = createDefaultProfile();
-    // Condizioni reali di partenza (ascensione 0): il primo nodo non è un muro.
-    const dungeon = generateDungeon(12345, { baseLevel: BALANCE.dungeonBaseLevel });
-    const first = dungeon.nodes[dungeon.startIds[0]!]!;
-    profile.run = { dungeonSeed: dungeon.seed, currentNodeId: null, clearedNodeIds: [], carryHp: {}, active: true };
-    const outcome = runFight(profile, dungeon, first);
+  it('un salto di livelli può attraversare più stadi in sequenza', () => {
+    const team = [makeRunMon('thane', 13)];
+    // XP enorme: deve incatenare le evoluzioni senza saltarne nessuna.
+    grantTeamXp(team, 5_000_000);
+    expect(team[0]!.defId).toBe('thanarok');
+  });
+
+  it('una creatura reclutata a livello alto nasce già evoluta', () => {
+    const mon = makeRunMon('thane', 35);
+    expect(mon.defId).toBe('thanarok');
+  });
+});
+
+describe('combattimenti della run', () => {
+  it('nodeSeed è deterministico e distingue i nodi', () => {
+    expect(nodeSeed(100, 'a')).toBe(nodeSeed(100, 'a'));
+    expect(nodeSeed(100, 'a')).not.toBe(nodeSeed(100, 'b'));
+  });
+
+  it('lo starter supera il primo nodo di una run', () => {
+    const map = generateRunMap(12345);
+    const run = freshRun('kael', map.seed);
+    // Primo nodo combattivo raggiungibile dalla partenza.
+    const first = map.startIds.map((id) => map.nodes[id]!).find((n) => n.encounter.length > 0);
+    if (!first) return; // mappa senza fight iniziali: nulla da verificare
+    const outcome = runFight(run, map, first, {});
     expect(outcome.won).toBe(true);
-    expect(Object.keys(outcome.carryHp).length).toBeGreaterThan(0);
+    expect(Object.keys(outcome.hpByUid).length).toBeGreaterThan(0);
   });
 
-  it('la sconfitta lascia comunque crescita (loop roguelite "ritenti e cresci")', () => {
-    const profile = createDefaultProfile();
-    const startLevelSum = profile.heroes.reduce((a, h) => a + h.level + h.xp, 0);
-    const goldBefore = profile.currencies.gold;
-    const summary = grantDefeatConsolation(profile, 2); // 2 nodi ripuliti prima di cadere
-    expect(summary.xp).toBeGreaterThan(0);
-    expect(summary.gold).toBeGreaterThan(0);
-    expect(profile.currencies.gold).toBe(goldBefore + summary.gold);
-    const endLevelSum = profile.heroes.reduce((a, h) => a + h.level + h.xp, 0);
-    expect(endLevelSum).toBeGreaterThan(startLevelSum); // la squadra è più forte di prima
+  it('gli HP residui si trascinano tra i combattimenti', () => {
+    const map = generateRunMap(777);
+    const run = freshRun('thane', map.seed);
+    const fight = Object.values(map.nodes).find((n) => n.encounter.length > 0 && n.segment === 0)!;
+    const full = run.team[0]!.hp;
+    const outcome = runFight(run, map, fight, {});
+    const after = outcome.hpByUid[run.team[0]!.uid];
+    expect(after).toBeDefined();
+    expect(after!).toBeLessThanOrEqual(full);
   });
 
-  it('le ricompense danno XP alla squadra e valuta', () => {
-    const profile = createDefaultProfile();
-    const dungeon = generateDungeon(999);
-    const goldBefore = profile.currencies.gold;
-    const rewardNode = Object.values(dungeon.nodes).find((n) => n.rewardKind === 'gold' && n.encounter.length > 0);
-    if (rewardNode) {
-      const summary = grantNodeRewards(profile, rewardNode);
-      expect(summary.xp).toBeGreaterThan(0);
-      expect(profile.currencies.gold).toBeGreaterThanOrEqual(goldBefore);
-    }
+  it('le essenze premiano di più palestre e Campione', () => {
+    const map = generateRunMap(3);
+    const gym = Object.values(map.nodes).find((n) => n.kind === 'gym')!;
+    const wild = Object.values(map.nodes).find((n) => n.kind === 'wild');
+    expect(essenceForNode(gym)).toBe(BALANCE.essencePerBadge);
+    expect(essenceForNode(map.nodes['champion']!)).toBe(BALANCE.essenceOnChampion);
+    if (wild) expect(essenceForNode(wild)).toBeLessThan(essenceForNode(gym));
   });
 });

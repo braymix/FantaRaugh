@@ -6,6 +6,7 @@
  * lo stile resta coerente (stessa griglia, stesso contorno, stesse proporzioni).
  */
 
+import { CREATURE_META, LINE_STAGES } from '@content/creatures';
 import {
   disc,
   groundShadow,
@@ -15,6 +16,7 @@ import {
   outline,
   px,
   rect,
+  tintGrid,
   toDataUrl,
   vline,
   type Grid,
@@ -290,59 +292,59 @@ function undead(p: Palette): Grid {
 
 const BUILDERS: Record<string, () => Grid> = {
   // Eroi
-  hero_thane: () =>
+  thane: () =>
     humanoid(pal({ main: '#6c7a92', mainDark: '#414c61' }), { head: 'helm', weapon: 'shield', cape: true, bulk: 1 }),
-  hero_kael: () =>
+  kael: () =>
     humanoid(pal({ main: '#b8452f', mainDark: '#7d2a1c', accent: '#e8c15a' }), { head: 'helm', weapon: 'sword' }),
-  hero_umbra: () =>
+  umbra: () =>
     humanoid(pal({ main: '#3b2a52', mainDark: '#241635', eye: '#e879f9', accentDark: '#1b1024' }), {
       head: 'hood',
       weapon: 'dagger',
       cape: true,
     }),
-  hero_pyra: () =>
+  pyra: () =>
     humanoid(pal({ main: '#7c3aed', mainDark: '#4c1d95', accent: '#f59e0b' }), {
       head: 'hat',
       weapon: 'staff',
       robe: true,
     }),
-  hero_seraphine: () =>
+  seraphine: () =>
     humanoid(pal({ main: '#e8dcc0', mainDark: '#b8a888', accent: '#d4af37', accentDark: '#8a6f22' }), {
       head: 'halo',
       weapon: 'none',
       robe: true,
     }),
-  hero_vesper: () =>
+  vesper: () =>
     humanoid(pal({ main: '#4a7c3f', mainDark: '#2f5128', accent: '#d4af37' }), { head: 'hood', weapon: 'bow' }),
 
   // Nemici
-  enemy_goblin_grunt: () =>
+  goblin: () =>
     humanoid(pal({ main: '#7a5c3a', mainDark: '#54401f', skin: '#6b9b3f', skinDark: '#4a7029', eye: '#f2d14a' }), {
       head: 'ears',
       weapon: 'dagger',
     }),
-  enemy_goblin_archer: () =>
+  gobarcher: () =>
     humanoid(pal({ main: '#6b5330', mainDark: '#463519', skin: '#78a84a', skinDark: '#527531', eye: '#f2d14a' }), {
       head: 'ears',
       weapon: 'bow',
     }),
-  enemy_orc_brute: () =>
+  orc: () =>
     humanoid(pal({ main: '#4d5a3a', mainDark: '#333d25', skin: '#5c8a3c', skinDark: '#3e6127', eye: '#ffdd57' }), {
       head: 'horns',
       weapon: 'hammer',
       bulk: 2,
     }),
-  enemy_dire_wolf: () => beast(pal({ main: '#8a8f98', mainDark: '#5c626c', eye: '#ff6b6b', accentDark: '#3a3f47' })),
-  enemy_cave_bat: () => flyer(pal({ main: '#6a5480', mainDark: '#41304f', eye: '#ffd166', accentDark: '#2a1f36' })),
-  enemy_dark_acolyte: () =>
+  wolf: () => beast(pal({ main: '#8a8f98', mainDark: '#5c626c', eye: '#ff6b6b', accentDark: '#3a3f47' })),
+  bat: () => flyer(pal({ main: '#6a5480', mainDark: '#41304f', eye: '#ffd166', accentDark: '#2a1f36' })),
+  acolyte: () =>
     humanoid(pal({ main: '#2f2540', mainDark: '#1d1629', eye: '#ff4d6d', accent: '#8b5cf6' }), {
       head: 'hood',
       weapon: 'staff',
       robe: true,
     }),
-  enemy_venom_spider: () =>
+  spider: () =>
     arachnid(pal({ main: '#4a6b3a', mainDark: '#2d4423', accent: '#a3e635', eye: '#a3e635' })),
-  enemy_shadow_lich: () =>
+  lich: () =>
     undead(pal({ main: '#2b1f3d', mainDark: '#1a1228', accent: '#22d3ee', eye: '#22d3ee' })),
 };
 
@@ -356,11 +358,25 @@ const ROLE_FALLBACK: Record<string, () => Grid> = {
   assassin: () => humanoid(pal({ main: '#3b2a52', mainDark: '#241635', eye: '#e879f9' }), { head: 'hood', weapon: 'dagger' }),
 };
 
-/** PNG data URL dello sprite di un'unità (memoizzato). */
+/**
+ * PNG data URL dello sprite di una creatura (memoizzato).
+ *
+ * Gli sprite sono definiti per LINEA evolutiva; gli stadi successivi riusano la
+ * stessa silhouette schiarita progressivamente. Così un'evoluzione si riconosce
+ * come "la stessa creatura, più potente" senza disegnarla da zero.
+ */
 export function spriteUrl(defId: string, role?: string): string {
-  const builder = BUILDERS[defId] ?? (role ? ROLE_FALLBACK[role] : undefined);
+  const meta = CREATURE_META[defId];
+  const line = meta?.line ?? defId;
+  const stage = meta?.stageIndex ?? 0;
+  const builder = BUILDERS[line] ?? (role ? ROLE_FALLBACK[role] : undefined);
   if (!builder) return '';
-  return toDataUrl(`${defId}:${role ?? ''}`, builder);
+  return toDataUrl(`${line}:${stage}:${role ?? ''}`, () => {
+    const g = builder();
+    if (stage > 0) tintGrid(g, stage * 0.16, OUTLINE);
+    return g;
+  });
 }
 
-export const SPRITE_IDS = Object.keys(BUILDERS);
+/** Tutte le creature con uno sprite dedicato (per la galleria di sviluppo). */
+export const SPRITE_IDS = Object.keys(BUILDERS).flatMap((line) => LINE_STAGES[line] ?? []);

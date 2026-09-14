@@ -87,6 +87,26 @@ export function groundShadow(g: Grid, cy: number, halfWidth: number, color = 'rg
   }
 }
 
+/** Schiarisce un colore esadecimale (gli stadi evoluti sono più luminosi). */
+export function lighten(color: string, amount: number): string {
+  if (!color.startsWith('#') || color.length !== 7) return color;
+  const ch = (i: number) => parseInt(color.slice(1 + i * 2, 3 + i * 2), 16);
+  const mix = (v: number) => Math.round(v + (255 - v) * amount);
+  const hex = (v: number) => v.toString(16).padStart(2, '0');
+  return `#${hex(mix(ch(0)))}${hex(mix(ch(1)))}${hex(mix(ch(2)))}`;
+}
+
+/** Applica la schiaritura a tutta la griglia, preservando il contorno scuro. */
+export function tintGrid(grid: Grid, amount: number, keep: string): void {
+  for (const row of grid) {
+    for (let x = 0; x < row.length; x++) {
+      const c = row[x];
+      if (!c || c === keep) continue;
+      row[x] = lighten(c, amount);
+    }
+  }
+}
+
 const cache = new Map<string, string>();
 
 /** Converte la griglia in PNG data URL (memoizzato per chiave). */

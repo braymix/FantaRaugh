@@ -1,252 +1,433 @@
 /**
- * Store globale (Zustand): profilo, run nel dungeon, battaglia corrente e
- * navigazione UI. È l'unico strato "mutabile" lato client; engine e contenuti
- * restano puri. Ogni mutazione che cambia il profilo lo persiste.
+ * Store globale (Zustand): profilo meta, run in corso, battaglia e navigazione.
+ *
+ * Il loop è quello di Pokelike: scegli uno starter, percorri la mappa scegliendo
+ * i nodi, recluti e fai evolvere la squadra, conquisti 8 medaglie, affronti i
+ * Quattro Supremi e il Campione. Se cadi, restano solo le essenze e i
+ * potenziamenti permanenti sulle linee evolutive.
  */
 
 import { create } from 'zustand';
 import { BALANCE } from '@content/balance';
-import { generateDungeon, type Dungeon } from '@content/dungeon';
-import type { BattleResult, Row } from '@engine/types';
-import { defaultStorage, type StorageAdapter } from './storage';
+import { CREATURE_MAP } from '@content/creatures';
+import { ITEM_MAP } from '@content/items';
+import { generateRunMap, type RunMap } from '@content/runmap';
+import { makeRng } from '@engine/prng';
+import type { BattleResult, Row, StatKey } from '@engine/types';
+import { healFull } from './party';
 import { loadProfile, saveProfile } from './save';
-import { createDefaultProfile } from './profile';
-import type { PlayerProfile } from './types';
-import { grantDefeatConsolation, grantNodeRewards, runFight, type RewardSummary } from './run';
-import { grantXp } from './progression';
+import { createMetaProfile } from './meta';
+import { defaultStorage, type StorageAdapter } from './storage';
+import {
+  essenceForNode,
+  grantTeamXp,
+  makeRunMon,
+  nodeSeed,
+  runFight,
+  xpForNode,
+} from './run';
+import type { MetaProfile, RunMon, RunState } from './types';
 
-export type Screen = 'home' | 'team' | 'dungeon' | 'battle';
+export type Screen = 'home' | 'starter' | 'map' | 'battle' | 'team' | 'meta';
+
+export interface NodeSummary {
+  xp: number;
+  essence: number;
+  evolved: { uid: string; from: string; to: string }[];
+}
 
 interface GameState {
   storage: StorageAdapter;
-  profile: PlayerProfile;
-  dungeon: Dungeon | null;
+  profile: MetaProfile;
+  map: RunMap | null;
   screen: Screen;
   lastBattle: BattleResult | null;
-  lastReward: RewardSummary | null;
+  lastSummary: NodeSummary | null;
   toast: string | null;
 
   init: () => void;
   persist: () => void;
   hardReset: () => void;
-  navigate: (screen: Screen) => void;
-  setToast: (msg: string | null) => void;
+  navigate: (s: Screen) => void;
+  setToast: (m: string | null) => void;
+  toggleNuzlocke: () => void;
 
-  // Squadra / equipaggiamento
-  toggleTeam: (defId: string) => void;
-  setRow: (defId: string, row: Row) => void;
-  equipWeapon: (defId: string, weaponInstanceId: string | null) => void;
-  setPerkSlot: (weaponInstanceId: string, slot: number, perkInstanceId: string | null) => void;
-  trainHero: (defId: string) => void;
-
-  // Dungeon / run
-  newDungeon: (seed?: number) => boolean;
+  // Run
+  startRun: (starterId: string, seed?: number) => void;
   abandonRun: () => void;
   enterNode: (nodeId: string) => void;
+
+  // Scelte in sospeso
+  resolveRecruit: (accept: boolean, replaceUid?: string) => void;
+  resolveItemPick: (itemId: string) => void;
+  resolveBall: (defId: string, replaceUid?: string) => void;
+  resolveTutor: (uid: string) => void;
+  resolveTrade: (giveUid: string) => void;
+  dismissPending: () => void;
+
+  // Squadra
+  moveMon: (uid: string, dir: -1 | 1) => void;
+  setRow: (uid: string, row: Row) => void;
+  equipItem: (uid: string, itemId: string | null) => void;
+
+  // Meta
+  buyLineBuff: (line: string, stat: StatKey) => void;
 }
 
-const TRAIN_COST = 60; // oro per sessione di addestramento
-const TRAIN_XP = 400;
-
-/** Livello base dei nemici in funzione dell'ascensione (roguelite). */
-function dungeonBaseLevelFor(ascension: number): number {
-  return BALANCE.dungeonBaseLevel + ascension * BALANCE.ascensionLevelStep;
+function cloneProfile(p: MetaProfile): MetaProfile {
+  return structuredClone(p);
 }
 
-function dungeonName(ascension: number): string {
-  return ascension > 0 ? `Cripta di Raugh — Ascensione ${ascension}` : 'Cripta di Raugh';
-}
-
-function refillEnergy(profile: PlayerProfile, now: number): void {
-  const { energy } = profile;
-  if (energy.current >= energy.max) {
-    energy.lastRefillAt = now;
-    return;
+/** Aggiunge alla squadra, sostituendo se è piena. Ritorna un messaggio. */
+function addToTeam(run: RunState, mon: RunMon, lineBuffs: MetaProfile['lineBuffs'], replaceUid?: string): string {
+  if (run.team.length < BALANCE.maxRecruits) {
+    run.team.push(mon);
+  } else if (replaceUid) {
+    const idx = run.team.findIndex((m) => m.uid === replaceUid);
+    if (idx < 0) return 'Creatura da sostituire non trovata.';
+    run.team[idx] = mon;
+  } else {
+    return 'Squadra piena: scegli chi sostituire.';
   }
-  const elapsedMin = (now - energy.lastRefillAt) / 60000;
-  const gained = Math.floor(elapsedMin / BALANCE.energyRefillMinutes);
-  if (gained > 0) {
-    energy.current = Math.min(energy.max, energy.current + gained);
-    energy.lastRefillAt = now;
-  }
+  healFull(mon, lineBuffs, run.team);
+  return `${CREATURE_MAP[mon.defId]?.name ?? 'Creatura'} si unisce alla squadra!`;
 }
 
 export const useGame = create<GameState>((set, get) => ({
   storage: defaultStorage(),
-  profile: createDefaultProfile(),
-  dungeon: null,
+  profile: createMetaProfile(),
+  map: null,
   screen: 'home',
   lastBattle: null,
-  lastReward: null,
+  lastSummary: null,
   toast: null,
 
   init: () => {
     const storage = get().storage;
     const profile = loadProfile(storage);
-    refillEnergy(profile, Date.now());
-    // Ripristina un dungeon in corso, se la run è attiva (stesso seed + stesso
-    // livello base ⇒ dungeon identico).
-    const dungeon = profile.run?.active
-      ? generateDungeon(profile.run.dungeonSeed, {
-          name: dungeonName(profile.ascension),
-          baseLevel: dungeonBaseLevelFor(profile.ascension),
-        })
-      : null;
-    set({ profile, dungeon });
+    const map = profile.run?.active ? generateRunMap(profile.run.seed) : null;
+    set({ profile, map });
     saveProfile(storage, profile);
   },
 
   persist: () => saveProfile(get().storage, get().profile),
 
   hardReset: () => {
-    const profile = createDefaultProfile();
+    const profile = createMetaProfile();
     saveProfile(get().storage, profile);
-    set({ profile, dungeon: null, lastBattle: null, lastReward: null, screen: 'home', toast: 'Profilo reimpostato.' });
+    set({ profile, map: null, lastBattle: null, lastSummary: null, screen: 'home', toast: 'Profilo azzerato.' });
   },
 
   navigate: (screen) => set({ screen }),
   setToast: (toast) => set({ toast }),
 
-  toggleTeam: (defId) => {
-    const profile = structuredClone(get().profile);
-    const idx = profile.team.indexOf(defId);
-    if (idx >= 0) {
-      profile.team.splice(idx, 1);
-    } else if (profile.team.length < BALANCE.teamSize) {
-      profile.team.push(defId);
-    } else {
-      set({ toast: `Squadra piena (max ${BALANCE.teamSize}).` });
-      return;
-    }
-    set({ profile });
+  toggleNuzlocke: () => {
+    const profile = cloneProfile(get().profile);
+    profile.nuzlocke = !profile.nuzlocke;
+    set({ profile, toast: profile.nuzlocke ? 'Nuzlocke attivo: chi cade è perso.' : 'Nuzlocke disattivato.' });
     get().persist();
   },
 
-  setRow: (defId, row) => {
-    const profile = structuredClone(get().profile);
-    const h = profile.heroes.find((x) => x.defId === defId);
-    if (h) h.row = row;
-    set({ profile });
-    get().persist();
-  },
-
-  equipWeapon: (defId, weaponInstanceId) => {
-    const profile = structuredClone(get().profile);
-    // Un'arma può stare su un solo eroe: la si toglie a chi la aveva.
-    if (weaponInstanceId) {
-      for (const other of profile.heroes) {
-        if (other.weaponInstanceId === weaponInstanceId) other.weaponInstanceId = null;
-      }
-    }
-    const h = profile.heroes.find((x) => x.defId === defId);
-    if (h) h.weaponInstanceId = weaponInstanceId;
-    set({ profile });
-    get().persist();
-  },
-
-  setPerkSlot: (weaponInstanceId, slot, perkInstanceId) => {
-    const profile = structuredClone(get().profile);
-    const w = profile.weapons.find((x) => x.instanceId === weaponInstanceId);
-    if (!w || slot < 0 || slot >= w.perkSlots.length) return;
-    // Un perk in un solo slot: rimuovilo da dove fosse.
-    if (perkInstanceId) {
-      for (const wp of profile.weapons) {
-        wp.perkSlots = wp.perkSlots.map((p) => (p === perkInstanceId ? null : p));
-      }
-    }
-    w.perkSlots[slot] = perkInstanceId;
-    set({ profile });
-    get().persist();
-  },
-
-  trainHero: (defId) => {
-    const profile = structuredClone(get().profile);
-    if (profile.currencies.gold < TRAIN_COST) {
-      set({ toast: 'Oro insufficiente.' });
-      return;
-    }
-    const h = profile.heroes.find((x) => x.defId === defId);
-    if (!h) return;
-    profile.currencies.gold -= TRAIN_COST;
-    grantXp(h, TRAIN_XP);
-    set({ profile, toast: `${defId} si è addestrato.` });
-    get().persist();
-  },
-
-  newDungeon: (seed) => {
-    const profile = structuredClone(get().profile);
-    if (profile.team.length === 0) {
-      set({ toast: 'Schiera almeno un eroe.' });
-      return false;
-    }
-    if (profile.energy.current < BALANCE.energyPerRun) {
-      set({ toast: 'Energia insufficiente.' });
-      return false;
-    }
-    profile.energy.current -= BALANCE.energyPerRun;
-    profile.runsAttempted += 1;
+  startRun: (starterId, seed) => {
+    const profile = cloneProfile(get().profile);
     const actualSeed = seed ?? (Date.now() >>> 0);
-    profile.run = {
-      dungeonSeed: actualSeed,
+    const starter = makeRunMon(starterId, BALANCE.starterLevel);
+    const run: RunState = {
+      seed: actualSeed,
+      team: [starter],
+      bag: [],
       currentNodeId: null,
       clearedNodeIds: [],
-      carryHp: {},
+      badges: 0,
+      nuzlocke: profile.nuzlocke,
       active: true,
+      pending: null,
     };
-    const dungeon = generateDungeon(actualSeed, {
-      name: dungeonName(profile.ascension),
-      baseLevel: dungeonBaseLevelFor(profile.ascension),
-    });
-    set({ profile, dungeon, screen: 'dungeon', lastBattle: null, lastReward: null });
+    healFull(starter, profile.lineBuffs, run.team);
+    profile.run = run;
+    profile.records.runs += 1;
+    if (!profile.seen.includes(starter.defId)) profile.seen.push(starter.defId);
+    set({ profile, map: generateRunMap(actualSeed), screen: 'map', lastBattle: null, lastSummary: null });
     get().persist();
-    return true;
   },
 
   abandonRun: () => {
-    const profile = structuredClone(get().profile);
+    const profile = cloneProfile(get().profile);
     if (profile.run) profile.run.active = false;
-    set({ profile, dungeon: null, screen: 'home' });
+    set({ profile, map: null, screen: 'home' });
     get().persist();
   },
 
   enterNode: (nodeId) => {
-    const { dungeon } = get();
-    const profile = structuredClone(get().profile);
-    if (!dungeon || !profile.run || !profile.run.active) return;
-    const node = dungeon.nodes[nodeId];
+    const { map } = get();
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!map || !run || !run.active || run.pending) return;
+    const node = map.nodes[nodeId];
     if (!node) return;
 
+    // Solo nodi raggiungibili dalla posizione corrente.
+    const reachable =
+      run.currentNodeId === null
+        ? map.startIds.includes(nodeId)
+        : (map.nodes[run.currentNodeId]?.next ?? []).includes(nodeId);
+    if (!reachable) return;
+
+    for (const e of node.encounter) if (!profile.seen.includes(e.defId)) profile.seen.push(e.defId);
+
     if (node.encounter.length > 0) {
-      const outcome = runFight(profile, dungeon, node);
-      if (outcome.won) {
-        const reward = grantNodeRewards(profile, node);
-        profile.run.clearedNodeIds.push(nodeId);
-        profile.run.currentNodeId = nodeId;
-        profile.run.carryHp = outcome.carryHp;
-        if (node.type === 'boss') {
-          // Boss battuto: ascensione +1 → il prossimo dungeon è più duro.
-          profile.run.active = false;
-          profile.ascension += 1;
-          profile.bossKills += 1;
-        }
-        set({ profile, lastBattle: outcome.result, lastReward: reward, screen: 'battle' });
-      } else {
-        // Sconfitta: consolazione roguelite proporzionale a quanto si è arrivati,
-        // così ogni tentativo lascia comunque un po' di crescita permanente.
-        profile.run.active = false;
-        const cleared = profile.run.clearedNodeIds.length;
-        const reward = grantDefeatConsolation(profile, cleared);
-        set({ profile, lastBattle: outcome.result, lastReward: reward, screen: 'battle' });
+      const outcome = runFight(run, map, node, profile.lineBuffs);
+      for (const mon of run.team) {
+        const hp = outcome.hpByUid[mon.uid];
+        if (hp !== undefined) mon.hp = hp;
       }
-    } else {
-      // Nodo non combattivo: si risolve subito.
-      if (node.type === 'rest') profile.run.carryHp = {}; // riposo = squadra a piena vita
-      const reward = grantNodeRewards(profile, node);
-      profile.run.clearedNodeIds.push(nodeId);
-      profile.run.currentNodeId = nodeId;
-      const msg = node.type === 'rest' ? 'La squadra recupera le forze.' : 'Ricompensa raccolta.';
-      set({ profile, lastBattle: null, lastReward: reward, toast: msg, screen: 'dungeon' });
+
+      if (!outcome.won) {
+        // Sconfitta: la run finisce, ma le essenze guadagnate restano.
+        run.active = false;
+        const essence = Math.round(essenceForNode(node) / 2);
+        profile.essence += essence;
+        set({ profile, lastBattle: outcome.result, lastSummary: { xp: 0, essence, evolved: [] }, screen: 'battle' });
+        get().persist();
+        return;
+      }
+
+      // I caduti: persi per sempre in Nuzlocke, altrimenti tornano con 1 HP.
+      for (const uid of outcome.faintedUids) {
+        const mon = run.team.find((m) => m.uid === uid);
+        if (!mon) continue;
+        if (run.nuzlocke) mon.fainted = true;
+        else mon.hp = 1;
+      }
+      if (run.nuzlocke) run.team = run.team.filter((m) => !m.fainted);
+
+      const xp = xpForNode(node);
+      const evolved = grantTeamXp(run.team, xp);
+      const essence = essenceForNode(node);
+      profile.essence += essence;
+      run.clearedNodeIds.push(nodeId);
+      run.currentNodeId = nodeId;
+
+      if (node.kind === 'gym') run.badges += 1;
+      profile.records.bestBadges = Math.max(profile.records.bestBadges, run.badges);
+      if (node.kind === 'champion') {
+        run.active = false;
+        profile.records.championWins += 1;
+      }
+      // Creatura selvatica battuta: la puoi reclutare.
+      if (node.kind === 'wild' && node.encounter[0]) {
+        run.pending = {
+          kind: 'recruit',
+          defId: node.encounter[0].defId,
+          level: Math.max(1, node.level - BALANCE.recruitLevelPenalty),
+        };
+      }
+
+      set({ profile, lastBattle: outcome.result, lastSummary: { xp, essence, evolved }, screen: 'battle' });
+      get().persist();
+      return;
     }
+
+    // --- Nodi non combattivi ---
+    let toast = '';
+    switch (node.kind) {
+      case 'heal': {
+        for (const mon of run.team) {
+          if (!run.nuzlocke) mon.fainted = false;
+          healFull(mon, profile.lineBuffs, run.team);
+        }
+        toast = 'La squadra recupera tutte le forze.';
+        break;
+      }
+      case 'item':
+        run.pending = { kind: 'item', offers: node.offers };
+        break;
+      case 'ball':
+        run.pending = { kind: 'ball', offers: node.offers, level: node.level };
+        break;
+      case 'tutor':
+        run.pending = { kind: 'tutor' };
+        break;
+      case 'trade':
+        if (node.offers[0]) run.pending = { kind: 'trade', defId: node.offers[0], level: node.level + 4 };
+        break;
+      case 'event': {
+        // Esito deterministico dal seed del nodo: nessun reload-scumming.
+        const rng = makeRng(nodeSeed(map.seed, node.id));
+        const roll = rng.next();
+        if (roll < 0.3) {
+          const xp = xpForNode(node) * 2;
+          grantTeamXp(run.team, xp);
+          toast = `Un vecchio addestratore vi istruisce: +${Math.round(xp)} XP.`;
+        } else if (roll < 0.55) {
+          profile.essence += BALANCE.essencePerNode * 3;
+          toast = 'Trovi un deposito di essenze.';
+        } else if (roll < 0.8) {
+          for (const mon of run.team) {
+            const half = Math.round(mon.hp * 1.5);
+            mon.hp = Math.max(mon.hp, half);
+          }
+          toast = 'Una sorgente vi ristora parzialmente.';
+        } else {
+          for (const mon of run.team) mon.hp = Math.max(1, Math.round(mon.hp * 0.8));
+          toast = 'Unʼimboscata! La squadra ne esce ammaccata.';
+        }
+        break;
+      }
+      default:
+        break;
+    }
+
+    run.clearedNodeIds.push(nodeId);
+    run.currentNodeId = nodeId;
+    set({ profile, lastBattle: null, lastSummary: null, screen: 'map', toast: toast || null });
+    get().persist();
+  },
+
+  resolveRecruit: (accept, replaceUid) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!run?.pending || run.pending.kind !== 'recruit') return;
+    if (!accept) {
+      run.pending = null;
+      set({ profile, toast: 'Lasci andare la creatura.' });
+      get().persist();
+      return;
+    }
+    const mon = makeRunMon(run.pending.defId, run.pending.level);
+    const msg = addToTeam(run, mon, profile.lineBuffs, replaceUid);
+    if (msg.startsWith('Squadra piena')) {
+      set({ toast: msg });
+      return;
+    }
+    run.pending = null;
+    set({ profile, toast: msg });
+    get().persist();
+  },
+
+  resolveItemPick: (itemId) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!run?.pending || run.pending.kind !== 'item') return;
+    if (!run.pending.offers.includes(itemId)) return;
+    run.bag.push(itemId);
+    run.pending = null;
+    set({ profile, toast: `${ITEM_MAP[itemId]?.name ?? 'Oggetto'} nella borsa.` });
+    get().persist();
+  },
+
+  resolveBall: (defId, replaceUid) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!run?.pending || run.pending.kind !== 'ball') return;
+    if (!run.pending.offers.includes(defId)) return;
+    const mon = makeRunMon(defId, run.pending.level);
+    const msg = addToTeam(run, mon, profile.lineBuffs, replaceUid);
+    if (msg.startsWith('Squadra piena')) {
+      set({ toast: msg });
+      return;
+    }
+    run.pending = null;
+    set({ profile, toast: msg });
+    get().persist();
+  },
+
+  resolveTutor: (uid) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!run?.pending || run.pending.kind !== 'tutor') return;
+    const mon = run.team.find((m) => m.uid === uid);
+    if (!mon) return;
+    if (mon.moveTier >= BALANCE.moveTierMax) {
+      set({ toast: 'Mossa già al massimo.' });
+      return;
+    }
+    mon.moveTier += 1;
+    run.pending = null;
+    set({ profile, toast: `Mossa finale potenziata (tier ${mon.moveTier}).` });
+    get().persist();
+  },
+
+  resolveTrade: (giveUid) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!run?.pending || run.pending.kind !== 'trade') return;
+    const idx = run.team.findIndex((m) => m.uid === giveUid);
+    if (idx < 0) return;
+    const incoming = makeRunMon(run.pending.defId, run.pending.level);
+    // L'oggetto tenuto resta a te: torna nella borsa.
+    const held = run.team[idx]!.itemId;
+    if (held) run.bag.push(held);
+    run.team[idx] = incoming;
+    healFull(incoming, profile.lineBuffs, run.team);
+    run.pending = null;
+    set({ profile, toast: `Scambio concluso: arriva ${CREATURE_MAP[incoming.defId]?.name ?? '?'}.` });
+    get().persist();
+  },
+
+  dismissPending: () => {
+    const profile = cloneProfile(get().profile);
+    if (!profile.run) return;
+    profile.run.pending = null;
+    set({ profile });
+    get().persist();
+  },
+
+  moveMon: (uid, dir) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!run) return;
+    const i = run.team.findIndex((m) => m.uid === uid);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= run.team.length) return;
+    [run.team[i], run.team[j]] = [run.team[j]!, run.team[i]!];
+    set({ profile });
+    get().persist();
+  },
+
+  setRow: (uid, row) => {
+    const profile = cloneProfile(get().profile);
+    const mon = profile.run?.team.find((m) => m.uid === uid);
+    if (!mon) return;
+    mon.row = row;
+    set({ profile });
+    get().persist();
+  },
+
+  equipItem: (uid, itemId) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    const mon = run?.team.find((m) => m.uid === uid);
+    if (!run || !mon) return;
+    if (itemId) {
+      const bagIdx = run.bag.indexOf(itemId);
+      if (bagIdx < 0) return;
+      run.bag.splice(bagIdx, 1);
+      if (mon.itemId) run.bag.push(mon.itemId);
+      mon.itemId = itemId;
+    } else if (mon.itemId) {
+      run.bag.push(mon.itemId);
+      mon.itemId = null;
+    }
+    set({ profile });
+    get().persist();
+  },
+
+  buyLineBuff: (line, stat) => {
+    const profile = cloneProfile(get().profile);
+    if (profile.essence < BALANCE.lineBuffCost) {
+      set({ toast: 'Essenze insufficienti.' });
+      return;
+    }
+    const buffs = (profile.lineBuffs[line] ??= {});
+    const current = buffs[stat] ?? 0;
+    if (current >= BALANCE.lineBuffMaxPoints) {
+      set({ toast: 'Potenziamento già al massimo.' });
+      return;
+    }
+    buffs[stat] = current + 1;
+    profile.essence -= BALANCE.lineBuffCost;
+    set({ profile, toast: `Potenziamento permanente applicato alla linea.` });
     get().persist();
   },
 }));

@@ -44,8 +44,47 @@ export function HelpSheet({ onClose }: { onClose: () => void }) {
 
         <Section title="Il combattimento è automatico">
           <p>
-            Non si scelgono le mosse: si costruisce la squadra. L'esito dipende da eroi, armi, perk,
-            livelli e schieramento. Puoi mettere in pausa, cambiare velocità o saltare l'animazione.
+            Non si scelgono le mosse: si costruisce la squadra. L'esito dipende da creature, tipi,
+            oggetti, livelli e schieramento. Puoi mettere in pausa, cambiare velocità o saltare.
+          </p>
+        </Section>
+
+        <Section title="Il viaggio">
+          <p>
+            Scegli uno <b>starter</b>, poi percorri la mappa un nodo alla volta reclutando compagni
+            (max 5). Obiettivo: <b>8 medaglie</b>, poi i <b>Quattro Supremi</b> (senza cure tra loro)
+            e il <b>Campione</b>. Ogni scelta di percorso ha un costo: un oggetto è un allenatore in
+            meno, e quindi meno livelli.
+          </p>
+          <Row icon="⚔️" label="Selvatico" text="Vinci e puoi reclutare la creatura battuta." />
+          <Row icon="🔮" label="Richiamo" text="Recluta gratis una creatura tra quelle proposte." />
+          <Row icon="🎯" label="Allenatore" text="Più duro, più esperienza." />
+          <Row icon="📦" label="Oggetto" text="Uno di tre oggetti tenuti, ognuno con un compromesso." />
+          <Row icon="🏕️" label="Rifugio" text="Cura tutta la squadra: gli HP NON si rigenerano da soli." />
+          <Row icon="📜" label="Maestro" text="Potenzia la mossa finale di una creatura (tier 1→3)." />
+          <Row icon="🔄" label="Scambio" text="Cedi una creatura per una di livello superiore." />
+          <Row icon="🏅" label="Palestra" text="Squadra a tema di un tipo: qui la copertura decide." />
+        </Section>
+
+        <Section title="I tipi: la decisione più importante">
+          <p>
+            Ogni creatura ha uno o due tipi e colpisce col proprio tipo. Un attacco può fare
+            <b> ×2</b> (superefficace), <b>×0.5</b> (poco efficace), fino a <b>×4</b> su una doppia
+            debolezza o <b>×0</b> se il bersaglio è immune. Colpire col proprio tipo dà un bonus del
+            50%.
+          </p>
+          <p>
+            Nella schermata Squadra c'è l'<b>analizzatore di debolezze</b>: se tre membri temono lo
+            stesso tipo, la palestra di quel tipo può spazzarti via. Specializzarsi conviene (i
+            <b> tratti</b> danno bonus a chi condivide un tipo) ma espone: è la tensione centrale.
+          </p>
+        </Section>
+
+        <Section title="Evoluzioni e crescita">
+          <p>
+            Le creature <b>evolvono automaticamente</b> a certi livelli, conservando ruolo e mosse ma
+            migliorando le statistiche (e a volte guadagnando un secondo tipo). La potenza cresce su
+            tre assi indipendenti: <b>livello</b>, <b>evoluzione</b> e <b>tier della mossa finale</b>.
           </p>
         </Section>
 

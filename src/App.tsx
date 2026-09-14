@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useGame } from '@state/store';
 import { HomeScreen } from '@ui/screens/HomeScreen';
 import { TeamScreen } from '@ui/screens/TeamScreen';
-import { DungeonScreen } from '@ui/screens/DungeonScreen';
+import { StarterScreen } from '@ui/screens/StarterScreen';
+import { MapScreen } from '@ui/screens/MapScreen';
+import { MetaScreen } from '@ui/screens/MetaScreen';
 import { BattleScreen } from '@ui/screens/BattleScreen';
 import { HelpSheet } from '@ui/components/HelpSheet';
 
@@ -13,8 +15,8 @@ export default function App() {
   const navigate = useGame((s) => s.navigate);
   const toast = useGame((s) => s.toast);
   const setToast = useGame((s) => s.setToast);
-  const energy = useGame((s) => s.profile.energy);
-  const gold = useGame((s) => s.profile.currencies.gold);
+  const essence = useGame((s) => s.profile.essence);
+  const badges = useGame((s) => s.profile.run?.badges ?? 0);
 
   useEffect(() => {
     if (!toast) return;
@@ -33,8 +35,8 @@ export default function App() {
             Fantaraugh
           </button>
           <div className="flex items-center gap-2 text-xs text-white/60">
-            <span title="Energia">⚡ {energy.current}/{energy.max}</span>
-            <span title="Oro">🪙 {gold}</span>
+            <span title="Medaglie">🏅 {badges}</span>
+            <span title="Essenze">✦ {essence}</span>
             <button
               onClick={() => setHelp(true)}
               title="Come si gioca"
@@ -48,8 +50,10 @@ export default function App() {
 
       <main className="relative flex-1 overflow-hidden">
         {screen === 'home' && <HomeScreen />}
+        {screen === 'starter' && <StarterScreen />}
+        {screen === 'map' && <MapScreen />}
         {screen === 'team' && <TeamScreen />}
-        {screen === 'dungeon' && <DungeonScreen />}
+        {screen === 'meta' && <MetaScreen />}
         {screen === 'battle' && <BattleScreen />}
       </main>
 

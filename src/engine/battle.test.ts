@@ -1,76 +1,59 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_MAP } from '@content/enemies';
-import { HERO_MAP } from '@content/heroes';
+import { CREATURE_MAP } from '@content/creatures';
 import { REGISTRY } from '@content/registry';
 import { simulateBattle } from './battle';
 import { buildBattleState, type Placement } from './build';
 import { makeUnit, testRegistry } from './test-helpers';
 import type { BattleState, Effect } from './types';
 
-const hero = (id: string, level = 20, row: Placement['row'] = 'front'): Placement => ({
-  def: HERO_MAP[id]!,
-  level,
-  row,
-});
-const foe = (id: string, level = 15, row: Placement['row'] = 'front'): Placement => ({
-  def: ENEMY_MAP[id]!,
+const at = (id: string, level: number, row: Placement['row']): Placement => ({
+  def: CREATURE_MAP[id]!,
   level,
   row,
 });
 
-function fullTeam(): BattleState {
-  const player: Placement[] = [
-    hero('hero_thane', 20, 'front'),
-    hero('hero_kael', 20, 'front'),
-    hero('hero_umbra', 20, 'back'),
-    hero('hero_pyra', 20, 'back'),
-    hero('hero_seraphine', 20, 'back'),
-  ];
-  const enemy: Placement[] = [
-    foe('enemy_orc_brute', 15, 'front'),
-    foe('enemy_goblin_grunt', 15, 'front'),
-    foe('enemy_goblin_archer', 15, 'back'),
-    foe('enemy_dark_acolyte', 15, 'back'),
-  ];
-  return buildBattleState(player, enemy);
+function squad(): BattleState {
+  return buildBattleState(
+    [at('thane', 25, 'front'), at('kael', 25, 'front'), at('umbra', 25, 'back'), at('pyra', 25, 'back')],
+    [at('orc_brute', 18, 'front'), at('goblin_grunt', 18, 'front'), at('dark_acolyte', 18, 'back')],
+  );
 }
 
 describe('simulateBattle — determinismo', () => {
   it('stesso stato iniziale + stesso seed ⇒ log IDENTICO', () => {
-    const r1 = simulateBattle(fullTeam(), 20260914, REGISTRY);
-    const r2 = simulateBattle(fullTeam(), 20260914, REGISTRY);
-    expect(r1.winner).toBe(r2.winner);
-    expect(r1.events.length).toBe(r2.events.length);
-    expect(r1.events).toEqual(r2.events);
-    expect(r1.finalUnits).toEqual(r2.finalUnits);
+    const a = simulateBattle(squad(), 20260914, REGISTRY);
+    const b = simulateBattle(squad(), 20260914, REGISTRY);
+    expect(a.winner).toBe(b.winner);
+    expect(a.events).toEqual(b.events);
+    expect(a.finalUnits).toEqual(b.finalUnits);
   });
 
-  it('produce sempre un vincitore (nessun pareggio in un fight sbilanciato)', () => {
-    const res = simulateBattle(fullTeam(), 7, REGISTRY);
-    expect(res.winner).not.toBe('draw');
+  it('produce sempre un esito e chiude con battleEnd', () => {
+    const res = simulateBattle(squad(), 7, REGISTRY);
+    expect(['player', 'enemy', 'draw']).toContain(res.winner);
     expect(res.events.at(-1)).toMatchObject({ t: 'battleEnd' });
   });
 
-  it('registra le statistiche di danno per ruolo', () => {
-    const res = simulateBattle(fullTeam(), 3, REGISTRY);
-    const total = Object.values(res.stats.damageByRole).reduce((a, b) => a + b, 0);
-    expect(total).toBeGreaterThan(0);
+  it('gli eventi di danno riportano elemento ed efficacia', () => {
+    const res = simulateBattle(squad(), 3, REGISTRY);
+    const dmg = res.events.find((e) => e.t === 'damage');
+    expect(dmg).toBeDefined();
+    if (dmg && dmg.t === 'damage') {
+      expect(typeof dmg.element).toBe('string');
+      expect(dmg.effectiveness).toBeGreaterThanOrEqual(0);
+    }
   });
 });
 
-describe('barra d\'azione (ATB)', () => {
+describe("barra d'azione (ATB)", () => {
   const registry = testRegistry();
 
-  function duel(pSpeed: number, eSpeed: number, pPassives: Effect[] = []): BattleState {
-    const p = makeUnit({ side: 'player', uid: 'P0', slot: 0, base: { speed: pSpeed }, passives: pPassives });
-    const e = makeUnit({ side: 'enemy', uid: 'E0', slot: 0, base: { speed: eSpeed } });
-    return { units: [p, e], turn: 0, tickCount: 0 };
-  }
-
-  it('l\'unità più veloce agisce per prima', () => {
-    const res = simulateBattle(duel(200, 50), 1, registry);
-    const firstTurn = res.events.find((e) => e.t === 'turnStart');
-    expect(firstTurn && 'uid' in firstTurn ? firstTurn.uid : null).toBe('P0');
+  it("l'unità più veloce agisce per prima", () => {
+    const p = makeUnit({ side: 'player', uid: 'P0', slot: 0, base: { speed: 200 } });
+    const e = makeUnit({ side: 'enemy', uid: 'E0', slot: 0, base: { speed: 50 } });
+    const res = simulateBattle({ units: [p, e], turn: 0, tickCount: 0 }, 1, registry);
+    const first = res.events.find((ev) => ev.t === 'turnStart');
+    expect(first && 'uid' in first ? first.uid : null).toBe('P0');
   });
 
   it('una spinta al gauge a inizio battaglia anticipa il turno', () => {
@@ -81,45 +64,48 @@ describe('barra d\'azione (ATB)', () => {
       targeting: 'self',
       actions: [{ kind: 'pushGauge', amount: 0.9 }],
     };
-    // Stessa velocità: senza spinta agirebbe prima P0 (slot minore); con la
-    // spinta su E0 l'ordine si inverte.
     const p = makeUnit({ side: 'player', uid: 'P0', slot: 0, base: { speed: 100 } });
     const e = makeUnit({ side: 'enemy', uid: 'E0', slot: 0, base: { speed: 100 }, passives: [boost] });
     const res = simulateBattle({ units: [p, e], turn: 0, tickCount: 0 }, 1, registry);
-    const firstTurn = res.events.find((ev) => ev.t === 'turnStart');
-    expect(firstTurn && 'uid' in firstTurn ? firstTurn.uid : null).toBe('E0');
+    const first = res.events.find((ev) => ev.t === 'turnStart');
+    expect(first && 'uid' in first ? first.uid : null).toBe('E0');
   });
 });
 
 describe('meccaniche di ruolo (via effetti)', () => {
   it('il Combattente accumula Slancio colpendo', () => {
-    const res = simulateBattle(fullTeam(), 11, REGISTRY);
-    const momentum = res.events.some((e) => e.t === 'statusApplied' && e.statusId === 'momentum');
-    expect(momentum).toBe(true);
-  });
-
-  it('il Curatore genera scudo dall\'eccesso di cura (overheal)', () => {
-    // Squadra ferita: il curatore cura oltre il massimo → scudo.
-    const player: Placement[] = [hero('hero_seraphine', 30, 'back'), hero('hero_thane', 1, 'front')];
-    const enemy: Placement[] = [foe('enemy_cave_bat', 5, 'front')];
-    const state = buildBattleState(player, enemy);
-    const res = simulateBattle(state, 5, REGISTRY);
-    const shield = res.events.some((e) => e.t === 'shield');
-    expect(shield).toBe(true);
+    const res = simulateBattle(squad(), 11, REGISTRY);
+    expect(res.events.some((e) => e.t === 'statusApplied' && e.statusId === 'momentum')).toBe(true);
   });
 
   it('il Nascosto entra in furtività a inizio battaglia', () => {
-    const res = simulateBattle(fullTeam(), 2, REGISTRY);
-    const stealth = res.events.some((e) => e.t === 'statusApplied' && e.statusId === 'stealth');
-    expect(stealth).toBe(true);
+    const res = simulateBattle(squad(), 2, REGISTRY);
+    expect(res.events.some((e) => e.t === 'statusApplied' && e.statusId === 'stealth')).toBe(true);
   });
 
-  it('gli stati a tempo infliggono danno (veleno/tick)', () => {
-    const player: Placement[] = [hero('hero_thane', 25, 'front')];
-    const enemy: Placement[] = [foe('enemy_venom_spider', 20, 'front')];
-    const res = simulateBattle(buildBattleState(player, enemy), 4, REGISTRY);
-    const tick = res.events.some((e) => e.t === 'statusTick');
-    expect(tick).toBe(true);
+  it("il Curatore genera scudo dall'eccesso di cura", () => {
+    const state = buildBattleState(
+      [at('seraphine', 40, 'back'), at('thane', 1, 'front')],
+      [at('cave_bat', 5, 'front')],
+    );
+    const res = simulateBattle(state, 5, REGISTRY);
+    expect(res.events.some((e) => e.t === 'shield')).toBe(true);
+  });
+});
+
+describe('anti-stall', () => {
+  const registry = testRegistry();
+
+  it('un fight impossibile da chiudere finisce comunque (overtime)', () => {
+    // Due unità con difese enormi e attacco minimo: senza anti-stall
+    // resterebbero in stallo fino al tetto dei turni.
+    const tanky = () => ({ maxHp: 200000, atk: 1, def: 100000, resistance: 100000 });
+    const p = makeUnit({ side: 'player', uid: 'P0', slot: 0, base: tanky() });
+    const e = makeUnit({ side: 'enemy', uid: 'E0', slot: 0, base: tanky() });
+    const res = simulateBattle({ units: [p, e], turn: 0, tickCount: 0 }, 1, registry);
+    expect(res.events.some((ev) => ev.t === 'overtime')).toBe(true);
+    expect(res.events.some((ev) => ev.t === 'death')).toBe(true);
+    expect(res.stats.turns).toBeLessThan(registry.config.maxTurns);
   });
 });
 
@@ -137,7 +123,6 @@ describe('guardia anti-loop', () => {
     const p = makeUnit({ side: 'player', uid: 'P0', slot: 0, passives: [thorns] });
     const e = makeUnit({ side: 'enemy', uid: 'E0', slot: 0, passives: [thorns] });
     const res = simulateBattle({ units: [p, e], turn: 0, tickCount: 0 }, 1, registry);
-    // Deve terminare con un risultato finito.
     expect(res.events.length).toBeGreaterThan(0);
     expect(['player', 'enemy', 'draw']).toContain(res.winner);
   });

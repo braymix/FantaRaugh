@@ -85,6 +85,9 @@ function addToTeam(run: RunState, mon: RunMon, lineBuffs: MetaProfile['lineBuffs
   } else if (replaceUid) {
     const idx = run.team.findIndex((m) => m.uid === replaceUid);
     if (idx < 0) return 'Creatura da sostituire non trovata.';
+    // L'oggetto tenuto resta tuo: torna nella borsa, come nello scambio.
+    const held = run.team[idx]!.itemId;
+    if (held) run.bag.push(held);
     run.team[idx] = mon;
   } else {
     return 'Squadra piena: scegli chi sostituire.';

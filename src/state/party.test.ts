@@ -63,3 +63,32 @@ describe('composizione della squadra', () => {
     expect(maxHpOf(m, {}, [m])).toBe(expected);
   });
 });
+
+describe('sostituzione in squadra piena', () => {
+  it("l'oggetto della creatura sostituita torna nella borsa, non si perde", async () => {
+    const { useGame } = await import('./store');
+    const store = useGame.getState();
+    store.hardReset();
+    store.startRun('kael', 999);
+
+    // Riempie la squadra fino al limite, con un oggetto sull'ultima.
+    const run = () => useGame.getState().profile.run!;
+    while (run().team.length < BALANCE.maxRecruits) {
+      const p = structuredClone(useGame.getState().profile);
+      p.run!.team.push(makeRunMon('goblin_grunt', 5));
+      useGame.setState({ profile: p });
+    }
+    const victimUid = run().team[run().team.length - 1]!.uid;
+    const withItem = structuredClone(useGame.getState().profile);
+    withItem.run!.team.find((m) => m.uid === victimUid)!.itemId = 'item_kingsrock';
+    withItem.run!.pending = { kind: 'ball', offers: ['dire_wolf'], level: 5 };
+    useGame.setState({ profile: withItem });
+
+    expect(run().bag).not.toContain('item_kingsrock');
+    useGame.getState().resolveBall('dire_wolf', victimUid);
+
+    expect(run().team.some((m) => m.uid === victimUid)).toBe(false);
+    expect(run().bag).toContain('item_kingsrock'); // recuperato
+    expect(run().team.length).toBe(BALANCE.maxRecruits);
+  });
+});

@@ -17,7 +17,7 @@ fight. Web app (PWA), mobile-first, estetica **pixel-art**, offline-ready.
 ```bash
 npm install
 npm run dev        # sviluppo (Vite)
-npm test           # test unitari (Vitest) — 75 test, incluso il determinismo
+npm test           # test unitari (Vitest) — 84 test, incluso il determinismo
 npm run sim -- 25    # simula run complete e riporta medaglie/nodi per starter
 npm run build      # build di produzione + service worker PWA
 npm run preview    # anteprima della build
@@ -33,6 +33,8 @@ npm run typecheck  # controllo dei tipi
   bonus stesso-tipo. Le 8 palestre sono a tema: la copertura decide.
 - **Squadra nella run**: parti solo, recluti chi batti (max 5, poi devi sostituire).
   Gli HP **non** si rigenerano: i rifugi sono una scelta di percorso.
+- **Deposito da 1 posto**: riposa ma non prende esperienza, e lo scambio si decide
+  *prima* di entrare in un nodo — l'anteprima della tappa diventa informazione utile.
 - **Tre assi di crescita**: livello, evoluzione automatica, tier della mossa finale.
 - **Oggetti tenuti** con trade-off espliciti: niente scelte dominate.
 - **Anti-stall**: i fight lunghi accelerano e poi si chiudono da soli.
@@ -52,8 +54,8 @@ sviluppo: `npm run dev` e apri `/sprites.html`.
 ```
 src/
   engine/    logica pura, deterministica, testabile — zero dipendenze da UI/framework
-  content/   dati: eroi, armi, perk, nemici, stati, dungeon, costanti (balance.ts)
-  state/     store Zustand, salvataggi (StorageAdapter), meta-progressione, loadout
+  content/   dati: creature, tipi, kit di ruolo, oggetti, stati, mappa, costanti
+  state/     store Zustand, salvataggi (StorageAdapter), squadra della run, meta
   ui/        componenti React (Tailwind) + replay del log di battaglia
   sim/       script CLI per il bilanciamento batch
 ```
@@ -88,18 +90,20 @@ pronta per sostituire localStorage con un backend senza toccare il resto.
 
 ## Aggiungere contenuti
 
-Tutto è dato. Per un nuovo eroe basta aggiungere un `UnitDef` in
-`src/content/heroes.ts`; per un perk, un `Effect` in `src/content/perks.ts`; ecc.
-Nessuna modifica all'engine.
+Tutto è dato. Una nuova **linea evolutiva** è un descrittore in
+`src/content/creatures.ts` (ruolo, tipi, stadi, livelli di evoluzione): il kit di
+mosse arriva dal ruolo e lo sprite dalla linea. Un nuovo **oggetto** è un `ItemDef`
+con il suo `Effect` in `src/content/items.ts`. Nessuna modifica all'engine.
 
 ## Cosa c'è e cosa no (questa sessione)
 
 **C'è**: engine ATB deterministico, sistema di effetti + 6 kit di ruolo, tabella dei
 tipi, 43 creature su 19 linee evolutive, 14 oggetti con trade-off, mappa a 37 tappe
 con 8 palestre a tema + Quattro Supremi + Campione, reclutamenti/scambi/maestro di
-mosse, Nuzlocke, metaprogressione con potenziamenti di linea e tratti di tipo, sprite
+mosse, deposito da 1 posto, Nuzlocke, metaprogressione con potenziamenti di linea e
+tratti di tipo, sprite
 pixel procedurali, analizzatore di debolezze, legenda di gioco, salvataggio
-localStorage, **75 test**, simulatore di run complete, PWA offline.
+localStorage, **84 test**, simulatore di run complete, PWA offline.
 
 **Non ancora**: Battle Tower come modalità separata, sfide giornaliere, account/cloud
 save, audio, acquisti reali.

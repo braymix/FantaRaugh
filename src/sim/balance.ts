@@ -3,8 +3,9 @@
  * "win rate di un singolo fight" ma **quanto lontano arriva una run**: quante
  * medaglie, quanti nodi, con che starter.
  *
- * Gioca partite complete in modo "greedy" (primo nodo raggiungibile, recluta
- * sempre quando può) riusando la logica reale della run.
+ * Gioca partite complete con una politica da "giocatore ragionevole" (cura se
+ * malconcio, fa crescere la squadra, poi combatte) riusando la logica reale
+ * della run: un agente cieco misurerebbe il caso peggiore, non il gioco.
  * Uso: `npm run sim -- [numeroRun]`
  */
 
@@ -39,6 +40,7 @@ function playRun(starterId: string, seed: number): RunReport {
   const run: RunState = {
     seed,
     team: [starter],
+    deposit: null,
     bag: [],
     currentNodeId: null,
     clearedNodeIds: [],

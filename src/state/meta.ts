@@ -2,7 +2,7 @@
 
 import type { MetaProfile } from './types';
 
-export const PROFILE_VERSION = 3;
+export const PROFILE_VERSION = 4;
 
 export function createMetaProfile(): MetaProfile {
   return {

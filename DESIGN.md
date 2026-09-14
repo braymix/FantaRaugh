@@ -108,7 +108,17 @@ strategica centrale. La schermata Squadra mostra l'**analizzatore di debolezze**
   una scelta di percorso, non un dettaglio.
 - Il **catalogo è unico**: le creature che affronti sono quelle che puoi reclutare.
   I nemici usano lo stesso catalogo con un solo moltiplicatore di potenza globale.
-- Squadra massima 5: quando è piena, reclutare impone di **scegliere chi sostituire**.
+- Squadra massima 5: quando è piena, reclutare impone di **scegliere chi sostituire**
+  (chi esce è perso; il suo oggetto torna nella borsa).
+- **Deposito da 1 posto**: salva una creatura dallo scarto. Chi è in deposito *riposa*
+  (rientra a HP pieni) ma **non guadagna esperienza**, quindi resta indietro di
+  livello. Lo scambio si decide **prima** di entrare in un nodo.
+
+> Perché il deposito costa XP e non è un sesto membro: senza un costo diventerebbe
+> una squadra da 6 con flessibilità perfetta. Il ritardo di livello lo rende una
+> scelta di pianificazione — tieni da parte il contro-tipo per la palestra che vedi
+> arrivare, sapendo che arriverà sottolivello. Il vincolo "si decide prima del
+> combattimento" è ciò che trasforma l'anteprima del nodo in informazione utile.
 
 ## 7. Tre assi di crescita indipendenti
 

@@ -12,6 +12,7 @@ function freshRun(starterId = 'kael', seed = 12345): RunState {
   const run: RunState = {
     seed,
     team: [starter],
+    deposit: null,
     bag: [],
     currentNodeId: null,
     clearedNodeIds: [],

@@ -269,7 +269,15 @@ export interface UnitSnapshot {
 
 export type BattleEvent =
   | { t: 'battleStart'; seed: number; units: UnitSnapshot[] }
-  | { t: 'turnStart'; uid: string; gauge: number; turn: number }
+  | {
+      t: 'turnStart';
+      uid: string;
+      gauge: number;
+      turn: number;
+      // Istantanea del gauge di tutte le unità vive: consente alla UI di disegnare
+      // le barre d'azione senza ricalcolare nulla (l'ATB "a salto" non logga i tick).
+      gauges: { uid: string; gauge: number }[];
+    }
   | {
       t: 'abilityUsed';
       uid: string;

@@ -465,7 +465,10 @@ function decayEndOfTurn(ctx: Ctx, unit: Unit): void {
 function executeTurn(ctx: Ctx, actor: Unit): void {
   ctx.state.turn++;
   ctx.stats.turns = ctx.state.turn;
-  log(ctx, { t: 'turnStart', uid: actor.uid, gauge: Math.round(actor.gauge), turn: ctx.state.turn });
+  const gauges = ctx.state.units
+    .filter((u) => u.alive)
+    .map((u) => ({ uid: u.uid, gauge: Math.round(u.gauge) }));
+  log(ctx, { t: 'turnStart', uid: actor.uid, gauge: Math.round(actor.gauge), turn: ctx.state.turn, gauges });
 
   statusTicks(ctx, actor);
   if (!actor.alive) {

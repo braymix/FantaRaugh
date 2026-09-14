@@ -63,6 +63,62 @@ svg {
   animation: float-up 0.9s ease-out forwards;
 }
 
+/* --- "Juice": feedback fisico che rende il combattimento leggibile --- */
+
+/* Scossa quando l'unità viene colpita. */
+@keyframes hit-shake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-3px, 1px); }
+  35% { transform: translate(3px, -1px); }
+  55% { transform: translate(-2px, 0); }
+  75% { transform: translate(2px, 1px); }
+}
+.animate-hit {
+  animation: hit-shake 0.32s steps(4, end);
+}
+
+/* Lampo bianco sul critico. */
+@keyframes crit-flash {
+  0% { filter: brightness(3) saturate(0.2); }
+  100% { filter: none; }
+}
+.animate-crit {
+  animation: crit-flash 0.4s ease-out;
+}
+
+/* Respiro lento: le unità vive non sembrano statue. */
+@keyframes idle-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+.animate-idle {
+  animation: idle-bob 2.4s ease-in-out infinite;
+}
+
+/* Alone pulsante su chi sta agendo. */
+@keyframes acting-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.55); }
+  50% { box-shadow: 0 0 10px 2px rgba(212, 175, 55, 0.55); }
+}
+.animate-acting {
+  animation: acting-pulse 1.1s ease-in-out infinite;
+}
+
+/* Fondo a "dithering": texture pixel discreta invece del colore piatto. */
+.bg-dither {
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, #1d1229 0%, #120a1c 100%);
+  background-size: 4px 4px, 100% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-idle,
+  .animate-acting,
+  .animate-hit,
+  .animate-crit { animation: none; }
+}
+
 /* Barra di scorrimento sottile, coerente col tema. */
 ::-webkit-scrollbar {
   width: 6px;

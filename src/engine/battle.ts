@@ -438,8 +438,17 @@ function statusTicks(ctx: Ctx, unit: Unit): void {
       const heal = Math.round(unit.base.maxHp * def.tick.healPctMaxHp * st.stacks);
       const missing = unit.base.maxHp - unit.hp;
       const healed = Math.min(missing, heal);
-      unit.hp += healed;
-      log(ctx, { t: 'statusTick', target: unit.uid, statusId: st.defId, amount: -healed, hpAfter: Math.round(unit.hp) });
+      // Nessun evento se la cura non ha effetto: il log resta pulito.
+      if (healed > 0) {
+        unit.hp += healed;
+        log(ctx, {
+          t: 'statusTick',
+          target: unit.uid,
+          statusId: st.defId,
+          amount: -healed,
+          hpAfter: Math.round(unit.hp),
+        });
+      }
     }
   }
 }

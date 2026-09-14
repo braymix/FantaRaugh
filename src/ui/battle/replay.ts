@@ -17,6 +17,7 @@ export interface DisplayStatus {
   id: string;
   name: string;
   stacks: number;
+  duration: number;
   kind: 'buff' | 'debuff';
 }
 
@@ -48,6 +49,10 @@ export interface DisplayState {
   winner: Side | 'draw' | null;
   done: boolean;
   floatSeq: number;
+  /** Ultima abilità annunciata: la UI la mostra come banner. */
+  lastAbility: { uid: string; name: string; isUltimate: boolean; id: number } | null;
+  /** id stato → nome leggibile, raccolto dagli eventi (niente dipendenze dai contenuti). */
+  statusNames: Record<string, string>;
 }
 
 function unitFromSnapshot(s: UnitSnapshot): DisplayUnit {
@@ -66,7 +71,13 @@ function unitFromSnapshot(s: UnitSnapshot): DisplayUnit {
     gauge: 0,
     alive: s.alive,
     acting: false,
-    statuses: s.statuses.map((st) => ({ id: st.id, name: st.name, stacks: st.stacks, kind: st.kind })),
+    statuses: s.statuses.map((st) => ({
+      id: st.id,
+      name: st.name,
+      stacks: st.stacks,
+      duration: st.duration,
+      kind: st.kind,
+    })),
   };
 }
 
@@ -81,6 +92,8 @@ export function initDisplay(threshold: number): DisplayState {
     winner: null,
     done: false,
     floatSeq: 0,
+    lastAbility: null,
+    statusNames: {},
   };
 }
 
@@ -104,6 +117,7 @@ export function applyEvent(state: DisplayState, ev: BattleEvent): DisplayState {
       for (const s of ev.units) {
         state.units[s.uid] = unitFromSnapshot(s);
         state.order.push(s.uid);
+        for (const st of s.statuses) state.statusNames[st.id] = st.name;
       }
       break;
     }
@@ -120,6 +134,12 @@ export function applyEvent(state: DisplayState, ev: BattleEvent): DisplayState {
     }
     case 'abilityUsed': {
       state.logLines.push(`${name(state, ev.uid)} usa ${ev.name}${ev.isUltimate ? ' ✦' : ''}`);
+      state.lastAbility = {
+        uid: ev.uid,
+        name: ev.name,
+        isUltimate: ev.isUltimate,
+        id: state.floatSeq++,
+      };
       break;
     }
     case 'damage': {
@@ -153,16 +173,39 @@ export function applyEvent(state: DisplayState, ev: BattleEvent): DisplayState {
     case 'statusTick': {
       const u = state.units[ev.target];
       if (u) u.hp = ev.hpAfter;
-      pushFloat(state, ev.target, ev.amount >= 0 ? `-${ev.amount}` : `+${-ev.amount}`, ev.amount >= 0 ? 'damage' : 'heal');
+      if (ev.amount !== 0) {
+        state.logLines.push(
+          `${name(state, ev.target)}: ${ev.amount > 0 ? `${ev.amount} danno` : `${-ev.amount} cura`} da ${
+            state.statusNames[ev.statusId] ?? ev.statusId
+          }`,
+        );
+      }
+      if (ev.amount !== 0) {
+        pushFloat(state, ev.target, ev.amount > 0 ? `-${ev.amount}` : `+${-ev.amount}`, ev.amount > 0 ? 'damage' : 'heal');
+      }
       break;
     }
     case 'statusApplied': {
+      state.statusNames[ev.statusId] = ev.name;
       const u = state.units[ev.target];
       if (u) {
         const existing = u.statuses.find((s) => s.id === ev.statusId);
-        if (existing) existing.stacks = ev.stacks;
-        else u.statuses.push({ id: ev.statusId, name: ev.name, stacks: ev.stacks, kind: ev.kind });
+        if (existing) {
+          existing.stacks = ev.stacks;
+          existing.duration = ev.duration;
+        } else {
+          u.statuses.push({
+            id: ev.statusId,
+            name: ev.name,
+            stacks: ev.stacks,
+            duration: ev.duration,
+            kind: ev.kind,
+          });
+        }
         pushFloat(state, ev.target, ev.name, 'status');
+        state.logLines.push(
+          `${name(state, ev.target)}: ${ev.kind === 'buff' ? '+' : '−'}${ev.name}${ev.stacks > 1 ? ` ×${ev.stacks}` : ''}`,
+        );
       }
       break;
     }
@@ -181,7 +224,7 @@ export function applyEvent(state: DisplayState, ev: BattleEvent): DisplayState {
       const to = state.units[ev.source];
       if (from) from.statuses = from.statuses.filter((s) => s.id !== ev.statusId);
       if (to && !to.statuses.some((s) => s.id === ev.statusId)) {
-        to.statuses.push({ id: ev.statusId, name: ev.name, stacks: 1, kind: 'buff' });
+        to.statuses.push({ id: ev.statusId, name: ev.name, stacks: 1, duration: 1, kind: 'buff' });
       }
       pushFloat(state, ev.source, `ruba ${ev.name}`, 'status');
       break;

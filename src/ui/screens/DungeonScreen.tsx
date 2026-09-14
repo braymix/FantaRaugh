@@ -3,7 +3,8 @@
 import { useMemo } from 'react';
 import type { DungeonNode, NodeType, RewardKind } from '@content/dungeon';
 import { useGame } from '@state/store';
-import { ROLE_META, threatStars } from '../format';
+import { Sprite } from '../components/Sprite';
+import { threatStars } from '../format';
 
 const TYPE_ICON: Record<NodeType, string> = {
   fight: '⚔️',
@@ -44,7 +45,7 @@ export function DungeonScreen() {
   const cleared = new Set(run.clearedNodeIds);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-dither">
       <div className="flex items-center justify-between border-b border-white/10 p-3">
         <div>
           <div className="font-display text-lg">{dungeon.name}</div>
@@ -123,11 +124,9 @@ function NodeCard({
       {node.encounter.length > 0 && (
         <>
           <div className="text-[10px] text-amber-300/80">{threatStars(node.threat)}</div>
-          <div className="mt-0.5 flex flex-wrap gap-0.5 text-xs">
-            {node.preview.enemyRoles.map((r, i) => (
-              <span key={i} className={ROLE_META[r].color} title={ROLE_META[r].label}>
-                {ROLE_META[r].icon}
-              </span>
+          <div className="mt-0.5 flex flex-wrap items-end gap-0.5">
+            {node.encounter.slice(0, 5).map((e, i) => (
+              <Sprite key={i} defId={e.enemyId} scale={1} />
             ))}
           </div>
         </>

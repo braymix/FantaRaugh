@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn-primary {
+    @apply rounded-lg bg-arcane px-4 py-2.5 font-semibold text-white shadow transition hover:bg-violet-600 active:scale-95 disabled:opacity-40;
+  }
+  .btn-ghost {
+    @apply rounded-lg bg-white/10 px-3 py-2 text-sm text-parchment transition hover:bg-white/20 active:scale-95 disabled:opacity-30;
+  }
+  .card {
+    @apply rounded-xl border border-white/10 bg-night-700/70 p-3;
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #120a1c;
+  color: #e8dcc0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+.animate-float-up {
+  animation: float-up 0.9s ease-out forwards;
+}
+
+/* Barra di scorrimento sottile, coerente col tema. */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2f1d44;
+  border-radius: 3px;
+}

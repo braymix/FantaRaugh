@@ -66,6 +66,19 @@ export function HelpSheet({ onClose }: { onClose: () => void }) {
           <Row icon="🏅" label="Palestra" text="Squadra a tema di un tipo: qui la copertura decide." />
         </Section>
 
+        <Section title="Squadra e deposito">
+          <p>
+            La squadra tiene <b>5 creature</b>. Quando è piena, reclutare impone di scegliere chi
+            sostituire: chi esce è perso (il suo oggetto torna nella borsa).
+          </p>
+          <p>
+            C'è <b>un posto in deposito</b> per salvare una creatura dallo scarto. Chi è in deposito
+            <b> riposa</b> (rientra a HP pieni) ma <b className="text-amber-200">non guadagna
+            esperienza</b>: resta indietro di livello. Lo scambio si decide <b>prima</b> di entrare in
+            un nodo — leggi l'anteprima della tappa e anticipa (la palestra di fuoco si vede arrivare).
+          </p>
+        </Section>
+
         <Section title="I tipi: la decisione più importante">
           <p>
             Ogni creatura ha uno o due tipi e colpisce col proprio tipo. Un attacco può fare

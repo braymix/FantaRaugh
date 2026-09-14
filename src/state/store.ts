@@ -66,6 +66,8 @@ interface GameState {
   dismissPending: () => void;
 
   // Squadra
+  depositMon: (uid: string) => void;
+  withdrawMon: (swapUid?: string) => void;
   moveMon: (uid: string, dir: -1 | 1) => void;
   setRow: (uid: string, row: Row) => void;
   equipItem: (uid: string, itemId: string | null) => void;
@@ -138,6 +140,7 @@ export const useGame = create<GameState>((set, get) => ({
     const run: RunState = {
       seed: actualSeed,
       team: [starter],
+      deposit: null,
       bag: [],
       currentNodeId: null,
       clearedNodeIds: [],
@@ -373,6 +376,62 @@ export const useGame = create<GameState>((set, get) => ({
     if (!profile.run) return;
     profile.run.pending = null;
     set({ profile });
+    get().persist();
+  },
+
+  depositMon: (uid) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!run?.active) return;
+    // Lo schieramento si decide prima del combattimento: mai con una scelta aperta.
+    if (run.pending) {
+      set({ toast: 'Risolvi prima la scelta in corso.' });
+      return;
+    }
+    if (run.deposit) {
+      set({ toast: 'Il deposito è già occupato.' });
+      return;
+    }
+    if (run.team.length <= 1) {
+      set({ toast: 'Non puoi restare senza squadra.' });
+      return;
+    }
+    const idx = run.team.findIndex((m) => m.uid === uid);
+    if (idx < 0) return;
+    const [mon] = run.team.splice(idx, 1);
+    run.deposit = mon!;
+    set({
+      profile,
+      toast: `${CREATURE_MAP[mon!.defId]?.name ?? 'Creatura'} va in deposito: riposa, ma non prende esperienza.`,
+    });
+    get().persist();
+  },
+
+  withdrawMon: (swapUid) => {
+    const profile = cloneProfile(get().profile);
+    const run = profile.run;
+    if (!run?.active || !run.deposit) return;
+    if (run.pending) {
+      set({ toast: 'Risolvi prima la scelta in corso.' });
+      return;
+    }
+    const incoming = run.deposit;
+    if (run.team.length < BALANCE.maxRecruits) {
+      run.team.push(incoming);
+      run.deposit = null;
+    } else if (swapUid) {
+      const idx = run.team.findIndex((m) => m.uid === swapUid);
+      if (idx < 0) return;
+      const outgoing = run.team[idx]!;
+      run.team[idx] = incoming;
+      run.deposit = outgoing;
+    } else {
+      set({ toast: 'Squadra piena: scegli chi mandare in deposito.' });
+      return;
+    }
+    // Ha riposato: rientra in forze.
+    healFull(incoming, profile.lineBuffs, run.team);
+    set({ profile, toast: `${CREATURE_MAP[incoming.defId]?.name ?? 'Creatura'} rientra in squadra.` });
     get().persist();
   },
 

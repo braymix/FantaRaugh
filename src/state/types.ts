@@ -34,6 +34,12 @@ export type PendingChoice =
 export interface RunState {
   seed: number;
   team: RunMon[];
+  /**
+   * Deposito (1 posto): salva una creatura dallo scarto. Lo scambio con la
+   * squadra si decide PRIMA di entrare in un nodo — a combattimento avviato
+   * lo schieramento è quello che è.
+   */
+  deposit: RunMon | null;
   /** Oggetti raccolti e non ancora assegnati. */
   bag: string[];
   currentNodeId: string | null;

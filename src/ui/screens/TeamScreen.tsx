@@ -27,6 +27,9 @@ export function TeamScreen() {
   const navigate = useGame((s) => s.navigate);
   const run = profile.run;
   const [openUid, setOpenUid] = useState<string | null>(null);
+  // Quando squadra e deposito sono entrambi pieni, schierare richiede di
+  // scegliere chi esce: questa modalità mostra il pulsante di scambio su ognuno.
+  const [swapping, setSwapping] = useState(false);
 
   if (!run) {
     return <div className="flex h-full items-center justify-center text-white/60">Nessuna run attiva.</div>;
@@ -71,6 +74,8 @@ export function TeamScreen() {
             Quanti membri prendono danno aumentato da quel tipo. Una palestra a tema può spazzarti via.
           </div>
         </div>
+
+        <DepositCard swapping={swapping} setSwapping={setSwapping} />
 
         {run.team.map((mon, i) => {
           const def = CREATURE_MAP[mon.defId];
@@ -119,6 +124,7 @@ export function TeamScreen() {
                     tratti ×{composed.traitTiers}
                   </span>
                 )}
+                <DepositActions uid={mon.uid} swapping={swapping} setSwapping={setSwapping} />
                 <button
                   className="ml-auto border border-white/20 px-1.5 text-white/70"
                   onClick={() => setOpenUid(open ? null : mon.uid)}
@@ -259,5 +265,107 @@ function ItemSlot({ uid, itemId }: { uid: string; itemId: string | null }) {
         ))}
       </select>
     </div>
+  );
+}
+
+/**
+ * Deposito (1 posto). Salva una creatura dallo scarto, ma chi è in deposito NON
+ * guadagna esperienza: resta indietro di livello. Lo scambio si decide prima di
+ * entrare in un nodo, quindi va anticipato leggendo l'anteprima della tappa.
+ */
+function DepositCard({
+  swapping,
+  setSwapping,
+}: {
+  swapping: boolean;
+  setSwapping: (v: boolean) => void;
+}) {
+  const profile = useGame((s) => s.profile);
+  const withdraw = useGame((s) => s.withdrawMon);
+  const run = profile.run!;
+  const mon = run.deposit;
+  const teamFull = run.team.length >= BALANCE.maxRecruits;
+
+  return (
+    <div className="card">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-wider text-white/40">
+          Deposito {run.deposit ? '1' : '0'}/{BALANCE.depositSlots}
+        </span>
+        <span className="text-[9px] text-white/30">si decide prima del combattimento</span>
+      </div>
+
+      {!mon ? (
+        <div className="text-[10px] leading-snug text-white/40">
+          Vuoto. Manda qui una creatura per non perderla quando ne recluti una nuova: riposa (rientra
+          a HP pieni) ma <b className="text-amber-200/80">non guadagna esperienza</b>.
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2">
+            <Sprite defId={mon.defId} role={CREATURE_MAP[mon.defId]?.role} scale={2} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-bold text-parchment">
+                {CREATURE_MAP[mon.defId]?.name ?? mon.defId}{' '}
+                <span className="text-white/45">Lv {mon.level}</span>
+              </div>
+              <TypeRow types={CREATURE_MAP[mon.defId]?.types ?? []} small />
+            </div>
+            {swapping ? (
+              <button className="border border-white/20 px-1.5 text-[10px] text-white/60" onClick={() => setSwapping(false)}>
+                annulla
+              </button>
+            ) : (
+              <button
+                className="border-2 border-gold/60 bg-gold/15 px-2 py-1 text-[10px] text-gold"
+                onClick={() => (teamFull ? setSwapping(true) : withdraw())}
+              >
+                Schiera
+              </button>
+            )}
+          </div>
+          {swapping && (
+            <div className="mt-1 text-[10px] text-amber-200">
+              Squadra piena: scegli chi mandare in deposito toccando "scambia".
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Pulsanti per mandare in deposito o scambiare una creatura della squadra. */
+function DepositActions({
+  uid,
+  swapping,
+  setSwapping,
+}: {
+  uid: string;
+  swapping: boolean;
+  setSwapping: (v: boolean) => void;
+}) {
+  const run = useGame((s) => s.profile.run)!;
+  const deposit = useGame((s) => s.depositMon);
+  const withdraw = useGame((s) => s.withdrawMon);
+
+  if (swapping) {
+    return (
+      <button
+        className="border-2 border-gold/60 bg-gold/15 px-1.5 text-[10px] text-gold"
+        onClick={() => {
+          withdraw(uid);
+          setSwapping(false);
+        }}
+      >
+        scambia
+      </button>
+    );
+  }
+  if (run.deposit || run.team.length <= 1) return null;
+  return (
+    <button className="border border-white/20 px-1.5 text-[10px] text-white/60" onClick={() => deposit(uid)}>
+      → deposito
+    </button>
   );
 }

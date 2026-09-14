@@ -1,361 +1,263 @@
 /**
- * Schermata squadra: equipaggia armi, inserisci perk, sali di livello, schiera.
+ * Squadra della run: ordine, schieramento, oggetti tenuti, evoluzioni.
  *
- * Obiettivo di design: capire a colpo d'occhio COSA fa ogni cosa. Perciò ogni
- * perk/abilità è una EffectCard strutturata, e i selettori mostrano l'anteprima
- * della variazione di statistiche prima di confermare.
+ * Include l'analizzatore di debolezze: rende esplicito il rischio di copertura,
+ * che è la decisione strategica centrale contro le palestre a tema.
  */
 
 import { useState } from 'react';
 import { BALANCE } from '@content/balance';
-import { HERO_MAP } from '@content/heroes';
-import { PERK_MAP } from '@content/perks';
+import { CREATURE_MAP } from '@content/creatures';
+import { ITEM_MAP } from '@content/items';
 import { REGISTRY } from '@content/registry';
-import { WEAPON_MAP } from '@content/weapons';
+import { ROLE_KITS } from '@content/rolekits';
+import { MON_TYPES, teamWeaknesses } from '@content/typechart';
 import { levelStats } from '@engine/build';
-import type { BaseStats } from '@engine/types';
-import { composeHero } from '@state/loadout';
+import { composeMon, maxHpOf } from '@state/party';
+import { xpForNextLevel } from '@state/progression';
 import { useGame } from '@state/store';
-import type { OwnedHero, PlayerProfile } from '@state/types';
-import { EffectCard, StatDelta } from '../components/EffectCard';
+import { EffectCard } from '../components/EffectCard';
+import { HpBar } from '../components/Bars';
 import { Sprite } from '../components/Sprite';
-import { RARITY_META, ROLE_META } from '../format';
-
-/** Statistiche dell'eroe con una certa arma equipaggiata (per l'anteprima). */
-function statsWith(profile: PlayerProfile, owned: OwnedHero, weaponInstanceId: string | null): BaseStats | null {
-  const c = composeHero({ ...owned, weaponInstanceId }, profile);
-  return c ? levelStats(c.def.baseStats, c.def.growth, owned.level) : null;
-}
-
-type Picker = { kind: 'weapon' } | { kind: 'perk'; slot: number } | null;
+import { TypeBadge, TypeRow } from '../components/TypeBadge';
+import { ROLE_META } from '../format';
 
 export function TeamScreen() {
   const profile = useGame((s) => s.profile);
-  const [selected, setSelected] = useState<string>(profile.team[0] ?? profile.heroes[0]?.defId ?? '');
-  const owned = profile.heroes.find((h) => h.defId === selected);
+  const navigate = useGame((s) => s.navigate);
+  const run = profile.run;
+  const [openUid, setOpenUid] = useState<string | null>(null);
+
+  if (!run) {
+    return <div className="flex h-full items-center justify-center text-white/60">Nessuna run attiva.</div>;
+  }
+
+  const weaknesses = teamWeaknesses(run.team.map((m) => CREATURE_MAP[m.defId]?.types ?? []));
+  const worst = MON_TYPES.filter((t) => weaknesses[t] >= 2).sort((a, b) => weaknesses[b] - weaknesses[a]);
 
   return (
     <div className="flex h-full flex-col bg-dither">
-      <div className="border-b-2 border-black/50 bg-night-800 p-3">
-        <div className="font-display text-lg">Squadra & Collezione</div>
-        <div className="text-[11px] text-white/45">
-          Schierati {profile.team.length}/{BALANCE.teamSize} · 🪙 {profile.currencies.gold} · 💎{' '}
-          {profile.currencies.gems}
+      <div className="flex items-center justify-between border-b-2 border-black/50 bg-night-800 p-3">
+        <div>
+          <div className="font-display text-base">Squadra</div>
+          <div className="text-[10px] text-white/45">
+            {run.team.length}/{BALANCE.maxRecruits} creature · borsa {run.bag.length}
+          </div>
         </div>
+        <button className="btn-ghost" onClick={() => navigate(run.active ? 'map' : 'home')}>
+          {run.active ? 'Mappa' : 'Base'}
+        </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-4">
-        {profile.heroes.map((h) => {
-          const def = HERO_MAP[h.defId]!;
-          const inTeam = profile.team.includes(h.defId);
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        {/* Analizzatore di debolezze */}
+        <div className="card">
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-white/40">Debolezze di squadra</div>
+          {worst.length === 0 ? (
+            <div className="text-[11px] text-emerald-300">Nessuna debolezza condivisa: buona copertura.</div>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {worst.map((t) => (
+                <span key={t} className="flex items-center gap-1">
+                  <TypeBadge type={t} small />
+                  <span className={`text-[10px] ${weaknesses[t] >= 3 ? 'text-red-300' : 'text-amber-200'}`}>
+                    ×{weaknesses[t]}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="mt-1 text-[9px] leading-snug text-white/35">
+            Quanti membri prendono danno aumentato da quel tipo. Una palestra a tema può spazzarti via.
+          </div>
+        </div>
+
+        {run.team.map((mon, i) => {
+          const def = CREATURE_MAP[mon.defId];
+          if (!def) return null;
+          const composed = composeMon(mon, profile.lineBuffs, run.team);
+          const stats = composed
+            ? levelStats(composed.placement.def.baseStats, composed.placement.def.growth, mon.level)
+            : def.baseStats;
+          const maxHp = maxHpOf(mon, profile.lineBuffs, run.team);
+          const item = mon.itemId ? ITEM_MAP[mon.itemId] : null;
+          const kit = ROLE_KITS[def.role];
+          const open = openUid === mon.uid;
           return (
-            <button
-              key={h.defId}
-              onClick={() => setSelected(h.defId)}
-              className={`relative flex flex-col items-center border-2 p-1 transition ${
-                selected === h.defId ? 'border-gold bg-night-600' : 'border-black/50 bg-night-800'
-              }`}
-            >
-              {inTeam && <span className="absolute right-1 top-0.5 text-[9px] text-emerald-400">●</span>}
-              <Sprite defId={h.defId} role={def.role} scale={2} />
-              <div className="w-full truncate text-center text-[10px] font-semibold">{def.name}</div>
-              <div className="text-[9px] text-white/40">Lv {h.level}</div>
-            </button>
+            <div key={mon.uid} className={`card ${mon.fainted ? 'opacity-40' : ''}`}>
+              <div className="flex items-start gap-2">
+                <Sprite defId={mon.defId} role={def.role} scale={2} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-1">
+                    <span className="truncate text-xs font-bold text-parchment">{def.name}</span>
+                    <span className="shrink-0 text-[10px] text-white/45">Lv {mon.level}</span>
+                  </div>
+                  <div className="mb-0.5 flex items-center gap-1">
+                    <TypeRow types={def.types} small />
+                    <span className={`text-[9px] ${ROLE_META[def.role].color}`}>{ROLE_META[def.role].label}</span>
+                  </div>
+                  <HpBar hp={Math.min(mon.hp, maxHp)} maxHp={maxHp} />
+                  <div className="flex justify-between text-[9px] text-white/50">
+                    <span>
+                      {Math.min(mon.hp, maxHp)}/{maxHp}
+                    </span>
+                    <span>
+                      XP {mon.xp}/{xpForNextLevel(mon.level)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <ReorderButtons uid={mon.uid} index={i} total={run.team.length} />
+                </div>
+              </div>
+
+              <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px]">
+                <RowToggle uid={mon.uid} row={mon.row} />
+                <span className="border border-gold/40 bg-gold/10 px-1 text-gold">mossa tier {mon.moveTier}</span>
+                {composed && composed.traitTiers > 0 && (
+                  <span className="border border-emerald-600/50 bg-emerald-900/40 px-1 text-emerald-200">
+                    tratti ×{composed.traitTiers}
+                  </span>
+                )}
+                <button
+                  className="ml-auto border border-white/20 px-1.5 text-white/70"
+                  onClick={() => setOpenUid(open ? null : mon.uid)}
+                >
+                  {open ? 'chiudi' : 'dettagli'}
+                </button>
+              </div>
+
+              <ItemSlot uid={mon.uid} itemId={mon.itemId} />
+
+              {open && (
+                <div className="mt-2 space-y-1.5">
+                  <div className="grid grid-cols-3 gap-1 text-[10px]">
+                    <Stat label="ATT" value={Math.round(stats.atk)} />
+                    <Stat label="DIF" value={Math.round(stats.def)} />
+                    <Stat label="VEL" value={Math.round(stats.speed)} />
+                    <Stat label="RES" value={Math.round(stats.resistance)} />
+                    <Stat label="CRIT" value={`${Math.round(stats.critRate * 100)}%`} />
+                    <Stat label="HP" value={Math.round(stats.maxHp)} />
+                  </div>
+                  {def.evolution && (
+                    <div className="text-[10px] text-sky-200">
+                      Evolve a Lv {def.evolution.atLevel} in{' '}
+                      {CREATURE_MAP[def.evolution.toId]?.name ?? '?'}
+                    </div>
+                  )}
+                  {item?.tradeoff && (
+                    <div className="text-[10px] italic text-amber-200/80">{item.name}: {item.tradeoff}</div>
+                  )}
+                  <EffectCard effect={kit.basicAttack} registry={REGISTRY} badge="base" compact />
+                  <EffectCard
+                    effect={composed?.placement.def.ability ?? kit.ability}
+                    registry={REGISTRY}
+                    badge={`ultimate ✦ tier ${mon.moveTier}`}
+                    compact
+                  />
+                  {kit.passives.map((p) => (
+                    <EffectCard key={p.id} effect={p} registry={REGISTRY} badge="innata" compact />
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
-      </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-6">
-        {owned && <HeroDetail key={owned.defId} defId={owned.defId} />}
+        {run.bag.length > 0 && (
+          <div className="card">
+            <div className="mb-1 text-[10px] uppercase tracking-wider text-white/40">
+              Borsa ({run.bag.length})
+            </div>
+            <div className="space-y-1">
+              {run.bag.map((id, i) => {
+                const it = ITEM_MAP[id];
+                return (
+                  <div key={`${id}_${i}`} className="text-[11px] text-white/70">
+                    <span className="font-semibold text-parchment">{it?.name ?? id}</span>
+                    {it?.tradeoff && <span className="text-white/40"> — {it.tradeoff}</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-1 text-[9px] text-white/35">
+              Assegna un oggetto dallo slot di una creatura qui sopra.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function HeroDetail({ defId }: { defId: string }) {
-  const profile = useGame((s) => s.profile);
-  const equipWeapon = useGame((s) => s.equipWeapon);
-  const setPerkSlot = useGame((s) => s.setPerkSlot);
-  const setRow = useGame((s) => s.setRow);
-  const toggleTeam = useGame((s) => s.toggleTeam);
-  const trainHero = useGame((s) => s.trainHero);
-  const [picker, setPicker] = useState<Picker>(null);
-
-  const owned = profile.heroes.find((h) => h.defId === defId)!;
-  const heroDef = HERO_MAP[defId]!;
-  const composed = composeHero(owned, profile);
-  const stats = composed ? levelStats(composed.def.baseStats, composed.def.growth, owned.level) : heroDef.baseStats;
-  const bare = statsWith(profile, owned, null)!; // senza arma, per mostrare il contributo
-  const inTeam = profile.team.includes(defId);
-
-  const weapon = profile.weapons.find((w) => w.instanceId === owned.weaponInstanceId) ?? null;
-  const weaponDef = weapon ? WEAPON_MAP[weapon.defId] : null;
-  const affinity = weaponDef?.affinityRoles.includes(heroDef.role) ?? false;
-
-  const availableWeapons = profile.weapons.filter(
-    (w) => !profile.heroes.some((h) => h.weaponInstanceId === w.instanceId && h.defId !== defId),
-  );
-  const slottedPerkIds = new Set(profile.weapons.flatMap((w) => w.perkSlots).filter((p): p is string => p !== null));
-
+function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="space-y-3">
-      {/* Intestazione */}
-      <div className="card flex items-center gap-3">
-        <Sprite defId={defId} role={heroDef.role} scale={3} />
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-base leading-tight">{heroDef.name}</div>
-          <div className="text-[11px]">
-            <span className={ROLE_META[heroDef.role].color}>
-              {ROLE_META[heroDef.role].icon} {ROLE_META[heroDef.role].label}
-            </span>
-            <span className={`ml-2 ${RARITY_META[heroDef.rarity].color}`}>{RARITY_META[heroDef.rarity].label}</span>
-          </div>
-          <div className="text-[11px] text-white/45">
-            Livello {owned.level} · {owned.xp} XP
-          </div>
-        </div>
-      </div>
+    <div className="bg-black/30 px-1 py-0.5">
+      <span className="text-white/40">{label} </span>
+      <span className="font-semibold text-parchment">{value}</span>
+    </div>
+  );
+}
 
-      {/* Statistiche: il numero e quanto ci mette l'equipaggiamento */}
-      <div className="card">
-        <div className="mb-1 text-[10px] uppercase tracking-wider text-white/40">
-          Statistiche <span className="text-white/25">(verde = contributo dell'arma)</span>
-        </div>
-        <StatDelta label="Salute" from={bare.maxHp} to={stats.maxHp} />
-        <StatDelta label="Attacco" from={bare.atk} to={stats.atk} />
-        <StatDelta label="Difesa" from={bare.def} to={stats.def} />
-        <StatDelta label="Velocità" from={bare.speed} to={stats.speed} />
-        <StatDelta label="Resistenza" from={bare.resistance} to={stats.resistance} />
-        <div className="flex items-baseline justify-between py-0.5 text-[11px]">
-          <span className="text-white/45">Critico</span>
-          <span className="font-semibold text-parchment">
-            {Math.round(stats.critRate * 100)}% · ×{stats.critDamage.toFixed(2)}
-          </span>
-        </div>
-      </div>
+function ReorderButtons({ uid, index, total }: { uid: string; index: number; total: number }) {
+  const moveMon = useGame((s) => s.moveMon);
+  return (
+    <>
+      <button
+        disabled={index === 0}
+        onClick={() => moveMon(uid, -1)}
+        className="border border-white/20 px-1 text-[10px] text-white/70 disabled:opacity-25"
+      >
+        ▲
+      </button>
+      <button
+        disabled={index === total - 1}
+        onClick={() => moveMon(uid, 1)}
+        className="border border-white/20 px-1 text-[10px] text-white/70 disabled:opacity-25"
+      >
+        ▼
+      </button>
+    </>
+  );
+}
 
-      {/* Azioni */}
-      <div className="card flex flex-wrap gap-2">
-        <button className={inTeam ? 'btn-ghost' : 'btn-primary'} onClick={() => toggleTeam(defId)}>
-          {inTeam ? 'Rimuovi' : 'Schiera'}
+function RowToggle({ uid, row }: { uid: string; row: 'front' | 'back' }) {
+  const setRow = useGame((s) => s.setRow);
+  return (
+    <span className="flex border border-black/50">
+      {(['front', 'back'] as const).map((r) => (
+        <button
+          key={r}
+          onClick={() => setRow(uid, r)}
+          className={`px-1.5 ${row === r ? 'bg-arcane text-white' : 'bg-white/5 text-white/45'}`}
+        >
+          {r === 'front' ? '▮ linea' : '▯ retro'}
         </button>
-        <div className="flex border-2 border-black/50">
-          {(['front', 'back'] as const).map((r) => (
-            <button
-              key={r}
-              className={`px-3 py-2 text-xs ${owned.row === r ? 'bg-arcane text-white' : 'bg-white/5 text-white/50'}`}
-              onClick={() => setRow(defId, r)}
-            >
-              {r === 'front' ? '▮ Prima linea' : '▯ Retrovia'}
-            </button>
-          ))}
-        </div>
-        <button className="btn-ghost" onClick={() => trainHero(defId)}>
-          Addestra · 60 🪙
-        </button>
-      </div>
+      ))}
+    </span>
+  );
+}
 
-      {/* Arma */}
-      <div className="card">
-        <div className="mb-1 flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-wider text-white/40">Arma</span>
-          <button className="border border-white/20 px-2 py-0.5 text-[10px] text-white/70" onClick={() => setPicker({ kind: 'weapon' })}>
-            Cambia
-          </button>
-        </div>
-        {weaponDef && weapon ? (
-          <>
-            <div className="flex items-baseline justify-between">
-              <span className={`text-sm font-bold ${RARITY_META[weaponDef.rarity].color}`}>{weaponDef.name}</span>
-              <span className="text-[10px] text-white/45">Lv {weapon.level}</span>
-            </div>
-            <div className="text-[10px] text-white/45">
-              {RARITY_META[weaponDef.rarity].label} · {weapon.perkSlots.length} slot
-              {affinity && <span className="ml-1 text-gold">★ affinità {ROLE_META[heroDef.role].label}</span>}
-            </div>
-            {weaponDef.intrinsic && (
-              <div className="mt-2">
-                <EffectCard effect={weaponDef.intrinsic} registry={REGISTRY} badge="intrinseco" compact />
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="text-[11px] text-white/40">Nessuna arma equipaggiata.</div>
-        )}
-      </div>
-
-      {/* Slot perk */}
-      {weapon && (
-        <div className="card">
-          <div className="mb-1 text-[10px] uppercase tracking-wider text-white/40">
-            Perk ({weapon.perkSlots.filter(Boolean).length}/{weapon.perkSlots.length})
-          </div>
-          <div className="space-y-2">
-            {weapon.perkSlots.map((perkInstanceId, i) => {
-              const op = perkInstanceId ? profile.perks.find((p) => p.instanceId === perkInstanceId) : null;
-              const pd = op ? PERK_MAP[op.defId] : null;
-              return (
-                <div key={i}>
-                  <div className="mb-0.5 flex items-center justify-between">
-                    <span className="text-[9px] uppercase tracking-wide text-white/35">Slot {i + 1}</span>
-                    <div className="flex gap-1">
-                      {perkInstanceId && (
-                        <button
-                          className="border border-white/20 px-1.5 text-[9px] text-white/50"
-                          onClick={() => setPerkSlot(weapon.instanceId, i, null)}
-                        >
-                          togli
-                        </button>
-                      )}
-                      <button
-                        className="border border-white/20 px-1.5 text-[9px] text-white/70"
-                        onClick={() => setPicker({ kind: 'perk', slot: i })}
-                      >
-                        scegli
-                      </button>
-                    </div>
-                  </div>
-                  {pd && op ? (
-                    <EffectCard
-                      effect={pd.effect}
-                      registry={REGISTRY}
-                      badge={`${RARITY_META[pd.rarity].label} · Lv ${op.level}`}
-                      compact
-                    />
-                  ) : (
-                    <div className="border-2 border-dashed border-white/15 p-2 text-center text-[10px] text-white/30">
-                      slot vuoto
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Abilità e passive */}
-      {composed && (
-        <div className="card space-y-2">
-          <div className="text-[10px] uppercase tracking-wider text-white/40">Abilità & Passive</div>
-          {composed.def.basicAttack && (
-            <EffectCard effect={composed.def.basicAttack} registry={REGISTRY} badge="base" />
-          )}
-          <EffectCard effect={composed.def.ability} registry={REGISTRY} badge="ultimate ✦" />
-          {composed.def.passives.map((p) => {
-            // La provenienza aiuta a capire cosa è innato e cosa viene dall'equipaggiamento.
-            const source = heroDef.passives.some((hp) => hp.id === p.id)
-              ? 'innata'
-              : weaponDef?.intrinsic?.id === p.id
-                ? 'arma'
-                : 'perk';
-            return <EffectCard key={p.id} effect={p} registry={REGISTRY} badge={source} compact />;
-          })}
-        </div>
-      )}
-
-      {/* Selettore a tendina dal basso */}
-      {picker && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/70" onClick={() => setPicker(null)}>
-          <div
-            className="max-h-[78%] w-full overflow-y-auto border-t-2 border-gold/50 bg-night-800 p-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <span className="font-display text-sm">
-                {picker.kind === 'weapon' ? 'Scegli un\'arma' : `Perk per lo slot ${picker.slot + 1}`}
-              </span>
-              <button className="btn-ghost" onClick={() => setPicker(null)}>
-                Chiudi
-              </button>
-            </div>
-
-            {picker.kind === 'weapon' ? (
-              <div className="space-y-2">
-                <button
-                  className="w-full border-2 border-black/40 bg-black/30 p-2 text-left text-[11px] text-white/60"
-                  onClick={() => {
-                    equipWeapon(defId, null);
-                    setPicker(null);
-                  }}
-                >
-                  Nessuna arma
-                </button>
-                {availableWeapons.map((w) => {
-                  const wd = WEAPON_MAP[w.defId]!;
-                  const preview = statsWith(profile, owned, w.instanceId);
-                  const aff = wd.affinityRoles.includes(heroDef.role);
-                  const equipped = w.instanceId === owned.weaponInstanceId;
-                  return (
-                    <button
-                      key={w.instanceId}
-                      className={`w-full border-2 p-2 text-left ${equipped ? 'border-gold/70 bg-gold/10' : 'border-black/40 bg-black/30'}`}
-                      onClick={() => {
-                        equipWeapon(defId, w.instanceId);
-                        setPicker(null);
-                      }}
-                    >
-                      <div className="flex items-baseline justify-between">
-                        <span className={`text-sm font-bold ${RARITY_META[wd.rarity].color}`}>{wd.name}</span>
-                        <span className="text-[10px] text-white/45">
-                          Lv {w.level}
-                          {equipped && ' · equipaggiata'}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-white/45">
-                        {RARITY_META[wd.rarity].label} · {w.perkSlots.length} slot
-                        {aff && <span className="ml-1 text-gold">★ affinità</span>}
-                      </div>
-                      {preview && (
-                        <div className="mt-1">
-                          <StatDelta label="Salute" from={stats.maxHp} to={preview.maxHp} />
-                          <StatDelta label="Attacco" from={stats.atk} to={preview.atk} />
-                          <StatDelta label="Difesa" from={stats.def} to={preview.def} />
-                          <StatDelta label="Velocità" from={stats.speed} to={preview.speed} />
-                        </div>
-                      )}
-                      {wd.intrinsic && (
-                        <div className="mt-1">
-                          <EffectCard effect={wd.intrinsic} registry={REGISTRY} badge="intrinseco" compact />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {profile.perks
-                  .filter((p) => !slottedPerkIds.has(p.instanceId) || weapon?.perkSlots[picker.slot] === p.instanceId)
-                  .map((p) => {
-                    const pd = PERK_MAP[p.defId]!;
-                    return (
-                      <button
-                        key={p.instanceId}
-                        className="w-full text-left"
-                        onClick={() => {
-                          if (weapon) setPerkSlot(weapon.instanceId, picker.slot, p.instanceId);
-                          setPicker(null);
-                        }}
-                      >
-                        <EffectCard
-                          effect={pd.effect}
-                          registry={REGISTRY}
-                          badge={`${RARITY_META[pd.rarity].label} · Lv ${p.level}`}
-                        />
-                      </button>
-                    );
-                  })}
-                {profile.perks.filter((p) => !slottedPerkIds.has(p.instanceId)).length === 0 && (
-                  <div className="p-3 text-center text-[11px] text-white/40">
-                    Nessun perk libero: toglilo da un'altra arma o trovane di nuovi nei forzieri.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+function ItemSlot({ uid, itemId }: { uid: string; itemId: string | null }) {
+  const bag = useGame((s) => s.profile.run?.bag ?? []);
+  const equipItem = useGame((s) => s.equipItem);
+  const current = itemId ? ITEM_MAP[itemId] : null;
+  return (
+    <div className="mt-1 flex items-center gap-1 text-[10px]">
+      <span className="text-white/40">Oggetto:</span>
+      <select
+        className="min-w-0 flex-1 border-2 border-black/50 bg-night-900 px-1 py-0.5 text-[10px] text-parchment"
+        value={itemId ?? ''}
+        onChange={(e) => equipItem(uid, e.target.value || null)}
+      >
+        <option value="">— nessuno —</option>
+        {current && <option value={current.id}>{current.name} (equipaggiato)</option>}
+        {bag.map((id, i) => (
+          <option key={`${id}_${i}`} value={id}>
+            {ITEM_MAP[id]?.name ?? id}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

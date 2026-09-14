@@ -36,7 +36,7 @@ export const BALANCE = {
   // --- Progressione ---
   /** XP necessaria a salire di livello: base * livello^esponente. */
   xpBase: 100,
-  xpExponent: 1.5,
+  xpExponent: 1.45,
   maxLevel: 60,
   /** Quanto scalano i modificatori dell'arma per livello (0.08 = +8%/livello). */
   weaponStatPerLevel: 0.08,
@@ -45,7 +45,7 @@ export const BALANCE = {
   /** Bonus alla resa dell'arma se il ruolo ha affinità con essa. */
   weaponAffinityBonus: 0.15,
   /** XP assegnata a fine fight, per livello di minaccia del nodo. */
-  xpPerThreat: 40,
+  xpPerThreat: 300,
   /** Oro assegnato a fine fight, per livello di minaccia. */
   goldPerThreat: 25,
 
@@ -69,7 +69,58 @@ export const BALANCE = {
    * per rendere i nemici competitivi a pari livello: alto ⇒ dungeon più duro ⇒
    * più tentativi/crescita necessari (roguelite).
    */
-  enemyPowerScale: 2.6,
+  enemyPowerScale: 0.95,
+
+  // --- Tipi ---
+  /** Bonus quando l'elemento del colpo coincide con un tipo di chi attacca. */
+  sameTypeBonus: 1.5,
+
+  // --- Anti-stall (ritmo dei combattimenti) ---
+  /** Turno da cui i danni vengono amplificati. */
+  stallSpeedUpTurn: 70,
+  stallDamageMult: 1.6,
+  /** Turno da cui parte l'overtime: tutti perdono HP ogni turno. */
+  overtimeTurn: 140,
+  overtimeDamagePct: 0.015,
+
+  // --- Struttura della run (stile Pokelike) ---
+  /** Livello dello starter a inizio run. */
+  starterLevel: 5,
+  /** Medaglie da conquistare prima dei Quattro Supremi. */
+  badgeCount: 8,
+  /** Nodi (oltre alla palestra) in ogni tratta verso una medaglia. */
+  nodesPerSegment: 3,
+  /** Quanto sale il livello dei nemici per ogni medaglia conquistata. */
+  levelPerBadge: 3,
+  /** Livello dei nemici nel primo tratto. */
+  wildBaseLevel: 5,
+  /** Bonus di livello dei nemici nei nodi allenatore / palestra / élite. */
+  trainerLevelBonus: 2,
+  gymLevelBonus: 4,
+  eliteLevelBonus: 6,
+  championLevelBonus: 8,
+  /** Quante creature può contenere la squadra (oltre, va sostituita). */
+  maxRecruits: 5,
+  /** Livello a cui entra una creatura reclutata rispetto al nodo. */
+  recruitLevelPenalty: 1,
+  /** Moltiplicatore di potenza dell'ultimate per tier del Maestro di Mosse. */
+  moveTierMult: [1, 1.25, 1.5],
+  moveTierMax: 3,
+
+  // --- Metaprogressione permanente ---
+  /** Essenze guadagnate per nodo ripulito / medaglia / vittoria finale. */
+  essencePerNode: 2,
+  essencePerBadge: 15,
+  essenceOnChampion: 120,
+  /** Costo di un punto di potenziamento permanente su una linea evolutiva. */
+  lineBuffCost: 25,
+  /** Quanto vale un punto di potenziamento (frazione sulla stat base). */
+  lineBuffStep: 0.06,
+  lineBuffMaxPoints: 15,
+  /** Soglie di membri dello stesso tipo per i tratti di sinergia. */
+  traitThresholds: [2, 3, 4],
+  /** Bonus per soglia di tratto raggiunta (frazione moltiplicativa). */
+  traitBonusPerTier: 0.08,
 
   // --- Rarità: slot perk sulle armi e moltiplicatore di potenza effetti ---
   raritySlots: {

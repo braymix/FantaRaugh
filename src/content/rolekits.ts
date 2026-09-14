@@ -1,37 +1,27 @@
 /**
- * 6 eroi giocabili, uno per ruolo. La meccanica identitaria di ogni ruolo è
- * espressa SOLO con effetti componibili (Effect), stati e regole di targeting —
- * mai con rami "if role" nel motore.
+ * I kit dei sei ruoli: attacco base, ultimate e passive.
  *
- *  - Curatore  → cura il più ferito, eccesso in scudo, cleanse, rigenerazione.
- *  - Caster    → AoE magica, cariche arcane che potenziano l'ultimate, ustioni.
- *  - Difensore → provocazione permanente, scudi di squadra, rappresaglia, energia dal danno.
- *  - Combattente→ colpi multipli, slancio (momentum) che cresce e cade sotto i critici.
- *  - Ladro     → velocissimo, agisce per primo, ruba buff, giustizia i feriti.
- *  - Nascosto  → furtività, bypassa la prima linea, agguato critico, rientra in stealth uccidendo.
+ * Estratti una volta sola e condivisi da TUTTE le creature di quel ruolo: una
+ * creatura è "statistiche + tipi + kit di ruolo + linea evolutiva". Le mosse non
+ * dichiarano un elemento, quindi prendono automaticamente il tipo di chi le usa
+ * (e con esso il bonus stesso-tipo): lo stesso kit funziona per una creatura di
+ * fuoco o di ghiaccio senza duplicare nulla.
  */
 
-import type { UnitDef } from '@engine/types';
+import type { Effect, Role } from '@engine/types';
 
-const HEALER: UnitDef = {
-  id: 'hero_seraphine',
-  name: 'Seraphine',
-  role: 'healer',
-  rarity: 'epic',
-  baseStats: {
-    maxHp: 3200,
-    atk: 320,
-    def: 130,
-    speed: 98,
-    critRate: 0.05,
-    critDamage: 1.5,
-    accuracy: 1.0,
-    resistance: 150,
-    energyMax: 100,
-  },
-  growth: { perLevel: { maxHp: 190, atk: 19, def: 8, resistance: 6 } },
+export interface RoleKit {
+  basicAttack: Effect;
+  ability: Effect;
+  passives: Effect[];
+  /** Descrizione del ruolo, mostrata nella UI. */
+  blurb: string;
+}
+
+const HEALER: RoleKit = {
+  blurb: 'Cura il più ferito; la cura in eccesso diventa scudo.',
   basicAttack: {
-    id: 'seraphine_mend',
+    id: 'kit_healer_basic',
     name: 'Tocco Curativo',
     trigger: 'active',
     targeting: 'lowestHpPctAllyOrSelf',
@@ -39,7 +29,7 @@ const HEALER: UnitDef = {
     tags: ['holy'],
   },
   ability: {
-    id: 'seraphine_dawn',
+    id: 'kit_healer_ult',
     name: 'Aurora Rinvigorente',
     trigger: 'active',
     targeting: 'allAllies',
@@ -52,7 +42,7 @@ const HEALER: UnitDef = {
   },
   passives: [
     {
-      id: 'seraphine_blessing',
+      id: 'kit_healer_blessing',
       name: 'Benedizione Iniziale',
       trigger: 'onBattleStart',
       targeting: 'allAllies',
@@ -60,8 +50,18 @@ const HEALER: UnitDef = {
       tags: ['holy'],
     },
     {
-      id: 'seraphine_emergency',
-      name: 'Intervento d\'Emergenza',
+      id: 'kit_healer_judgement',
+      name: 'Giudizio Luminoso',
+      trigger: 'onTurnEnd',
+      targeting: 'lowestHpEnemy',
+      // Il Curatore resta un curatore, ma deve poter CHIUDERE un combattimento:
+      // senza pressione offensiva sarebbe una scelta-trappola e premierebbe lo stallo.
+      actions: [{ kind: 'damage', power: 0.55, damageType: 'magical', tags: ['magical', 'holy'] }],
+      tags: ['holy'],
+    },
+    {
+      id: 'kit_healer_emergency',
+      name: "Intervento d'Emergenza",
       trigger: 'onAllyDeath',
       targeting: 'allAllies',
       maxTriggersPerBattle: 2,
@@ -71,49 +71,33 @@ const HEALER: UnitDef = {
   ],
 };
 
-const CASTER: UnitDef = {
-  id: 'hero_pyra',
-  name: 'Pyra',
-  role: 'caster',
-  rarity: 'epic',
-  baseStats: {
-    maxHp: 2800,
-    atk: 460,
-    def: 90,
-    speed: 100,
-    critRate: 0.1,
-    critDamage: 1.6,
-    accuracy: 1.0,
-    resistance: 120,
-    energyMax: 110,
-  },
-  growth: { perLevel: { maxHp: 165, atk: 30, def: 6 } },
+const CASTER: RoleKit = {
+  blurb: 'Danno ad area: lo contrasta la Resistenza, non la Difesa. Accumula cariche.',
   basicAttack: {
-    id: 'pyra_emberwave',
-    name: 'Ondata di Braci',
+    id: 'kit_caster_basic',
+    name: 'Ondata Arcana',
     trigger: 'active',
     targeting: 'allEnemies',
-    actions: [{ kind: 'damage', power: 0.6, damageType: 'magical', tags: ['magical', 'area', 'fire'] }],
+    actions: [{ kind: 'damage', power: 0.6, damageType: 'magical', tags: ['magical', 'area'] }],
     tags: ['area'],
   },
   ability: {
-    id: 'pyra_meteor',
-    name: 'Meteora',
+    id: 'kit_caster_ult',
+    name: 'Cataclisma',
     trigger: 'active',
     targeting: 'allEnemies',
     energyCost: 110,
-    // La Carica Arcana (arcane_charge) potenzia l'atk: la Meteora ne beneficia e
-    // poi la consuma, realizzando "le cariche potenziano l'incantesimo successivo".
+    // La Carica Arcana potenzia l'attacco: il Cataclisma ne beneficia e poi la consuma.
     actions: [
-      { kind: 'damage', power: 1.5, damageType: 'magical', tags: ['magical', 'area', 'fire'] },
+      { kind: 'damage', power: 1.5, damageType: 'magical', tags: ['magical', 'area'] },
       { kind: 'applyStatus', statusId: 'burn', duration: 3, stacks: 2 },
       { kind: 'removeStatus', statusId: 'arcane_charge', onSelf: true },
     ],
-    tags: ['area', 'fire'],
+    tags: ['area'],
   },
   passives: [
     {
-      id: 'pyra_charge',
+      id: 'kit_caster_charge',
       name: 'Accumulo Arcano',
       trigger: 'onTurnStart',
       targeting: 'self',
@@ -121,8 +105,8 @@ const CASTER: UnitDef = {
       tags: ['magical'],
     },
     {
-      id: 'pyra_combustion',
-      name: 'Combustione',
+      id: 'kit_caster_scorch',
+      name: 'Marchio Bruciante',
       trigger: 'onHit',
       targeting: 'triggerSource',
       chance: 0.4,
@@ -132,25 +116,10 @@ const CASTER: UnitDef = {
   ],
 };
 
-const DEFENDER: UnitDef = {
-  id: 'hero_thane',
-  name: 'Thane',
-  role: 'defender',
-  rarity: 'rare',
-  baseStats: {
-    maxHp: 5200,
-    atk: 260,
-    def: 320,
-    speed: 82,
-    critRate: 0.05,
-    critDamage: 1.5,
-    accuracy: 1.0,
-    resistance: 200,
-    energyMax: 90,
-  },
-  growth: { perLevel: { maxHp: 310, atk: 15, def: 20, resistance: 10 } },
+const DEFENDER: RoleKit = {
+  blurb: 'Provoca: gli attacchi singoli vanno su di lui. Guadagna energia subendo danno.',
   basicAttack: {
-    id: 'thane_bash',
+    id: 'kit_defender_basic',
     name: 'Scudata',
     trigger: 'active',
     targeting: 'singleEnemy',
@@ -160,7 +129,7 @@ const DEFENDER: UnitDef = {
     ],
   },
   ability: {
-    id: 'thane_bulwark',
+    id: 'kit_defender_ult',
     name: 'Fortezza Vivente',
     trigger: 'active',
     targeting: 'allAllies',
@@ -172,21 +141,21 @@ const DEFENDER: UnitDef = {
   },
   passives: [
     {
-      id: 'thane_taunt',
+      id: 'kit_defender_taunt',
       name: 'Provocazione',
       trigger: 'onTurnStart',
       targeting: 'self',
       actions: [{ kind: 'applyStatus', statusId: 'taunt', duration: 2, stacks: 1, onSelf: true }],
     },
     {
-      id: 'thane_guard_start',
+      id: 'kit_defender_guard',
       name: 'Postura di Guardia',
       trigger: 'onBattleStart',
       targeting: 'self',
       actions: [{ kind: 'applyStatus', statusId: 'taunt', duration: 2, stacks: 1, onSelf: true }],
     },
     {
-      id: 'thane_retribution',
+      id: 'kit_defender_retribution',
       name: 'Rappresaglia',
       trigger: 'onDamaged',
       targeting: 'triggerSource',
@@ -196,32 +165,17 @@ const DEFENDER: UnitDef = {
   ],
 };
 
-const BLADE: UnitDef = {
-  id: 'hero_kael',
-  name: 'Kael',
-  role: 'blade',
-  rarity: 'rare',
-  baseStats: {
-    maxHp: 3600,
-    atk: 400,
-    def: 160,
-    speed: 106,
-    critRate: 0.15,
-    critDamage: 1.6,
-    accuracy: 1.0,
-    resistance: 120,
-    energyMax: 100,
-  },
-  growth: { perLevel: { maxHp: 215, atk: 27, def: 10 } },
+const BLADE: RoleKit = {
+  blurb: 'Colpi multipli; accumula Slancio, che perde se subisce un critico.',
   basicAttack: {
-    id: 'kael_flurry',
+    id: 'kit_blade_basic',
     name: 'Raffica',
     trigger: 'active',
     targeting: 'singleEnemy',
     actions: [{ kind: 'damage', power: 0.55, damageType: 'physical', hits: 2, tags: ['physical'] }],
   },
   ability: {
-    id: 'kael_onslaught',
+    id: 'kit_blade_ult',
     name: 'Assalto Inarrestabile',
     trigger: 'active',
     targeting: 'singleEnemy',
@@ -230,14 +184,14 @@ const BLADE: UnitDef = {
   },
   passives: [
     {
-      id: 'kael_momentum_gain',
+      id: 'kit_blade_momentum',
       name: 'Slancio',
       trigger: 'onHit',
       targeting: 'self',
       actions: [{ kind: 'applyStatus', statusId: 'momentum', duration: 99, stacks: 1, onSelf: true }],
     },
     {
-      id: 'kael_momentum_break',
+      id: 'kit_blade_break',
       name: 'Slancio Spezzato',
       trigger: 'onDamaged',
       targeting: 'self',
@@ -245,7 +199,7 @@ const BLADE: UnitDef = {
       actions: [{ kind: 'removeStatus', statusId: 'momentum', onSelf: true }],
     },
     {
-      id: 'kael_bloodrush',
+      id: 'kit_blade_rush',
       name: 'Foga',
       trigger: 'onKill',
       targeting: 'self',
@@ -254,25 +208,10 @@ const BLADE: UnitDef = {
   ],
 };
 
-const THIEF: UnitDef = {
-  id: 'hero_vesper',
-  name: 'Vesper',
-  role: 'thief',
-  rarity: 'rare',
-  baseStats: {
-    maxHp: 3000,
-    atk: 360,
-    def: 110,
-    speed: 138,
-    critRate: 0.3,
-    critDamage: 1.6,
-    accuracy: 1.0,
-    resistance: 100,
-    energyMax: 90,
-  },
-  growth: { perLevel: { maxHp: 175, atk: 24, def: 7, speed: 1 } },
+const THIEF: RoleKit = {
+  blurb: 'Velocissimo, agisce per primo, ruba buff e finisce i feriti.',
   basicAttack: {
-    id: 'vesper_cutpurse',
+    id: 'kit_thief_basic',
     name: 'Taglioborse',
     trigger: 'active',
     targeting: 'singleEnemy',
@@ -282,7 +221,7 @@ const THIEF: UnitDef = {
     ],
   },
   ability: {
-    id: 'vesper_heist',
+    id: 'kit_thief_ult',
     name: 'Colpo Grosso',
     trigger: 'active',
     targeting: 'lowestHpEnemy',
@@ -294,14 +233,14 @@ const THIEF: UnitDef = {
   },
   passives: [
     {
-      id: 'vesper_headstart',
+      id: 'kit_thief_headstart',
       name: 'Anticipo',
       trigger: 'onBattleStart',
       targeting: 'self',
       actions: [{ kind: 'pushGauge', amount: 0.4 }],
     },
     {
-      id: 'vesper_finisher',
+      id: 'kit_thief_finisher',
       name: 'Giustiziere',
       trigger: 'onHit',
       targeting: 'triggerSource',
@@ -312,32 +251,17 @@ const THIEF: UnitDef = {
   ],
 };
 
-const ASSASSIN: UnitDef = {
-  id: 'hero_umbra',
-  name: 'Umbra',
-  role: 'assassin',
-  rarity: 'legendary',
-  baseStats: {
-    maxHp: 2700,
-    atk: 500,
-    def: 90,
-    speed: 122,
-    critRate: 0.25,
-    critDamage: 1.8,
-    accuracy: 1.0,
-    resistance: 90,
-    energyMax: 100,
-  },
-  growth: { perLevel: { maxHp: 160, atk: 33, def: 6, speed: 1 } },
+const ASSASSIN: RoleKit = {
+  blurb: 'Furtivo: non bersagliabile finché non attacca. Colpisce la retrovia.',
   basicAttack: {
-    id: 'umbra_shadowstrike',
-    name: 'Colpo d\'Ombra',
+    id: 'kit_assassin_basic',
+    name: "Colpo d'Ombra",
     trigger: 'active',
     targeting: 'backRowEnemySingle',
     actions: [{ kind: 'damage', power: 1.4, damageType: 'physical', tags: ['physical', 'shadow'] }],
   },
   ability: {
-    id: 'umbra_deathmark',
+    id: 'kit_assassin_ult',
     name: 'Marchio della Morte',
     trigger: 'active',
     targeting: 'backRowEnemySingle',
@@ -349,14 +273,14 @@ const ASSASSIN: UnitDef = {
   },
   passives: [
     {
-      id: 'umbra_vanish',
+      id: 'kit_assassin_vanish',
       name: 'Dissolvenza',
       trigger: 'onBattleStart',
       targeting: 'self',
       actions: [{ kind: 'applyStatus', statusId: 'stealth', duration: 99, stacks: 1, onSelf: true }],
     },
     {
-      id: 'umbra_ambush',
+      id: 'kit_assassin_ambush',
       name: 'Agguato',
       trigger: 'onBeforeAttack',
       targeting: 'self',
@@ -364,15 +288,15 @@ const ASSASSIN: UnitDef = {
       actions: [{ kind: 'applyStatus', statusId: 'ambush', duration: 1, stacks: 1, onSelf: true }],
     },
     {
-      id: 'umbra_reveal',
+      id: 'kit_assassin_reveal',
       name: 'Rivelazione',
       trigger: 'onBeforeAttack',
       targeting: 'self',
       actions: [{ kind: 'removeStatus', statusId: 'stealth', onSelf: true }],
     },
     {
-      id: 'umbra_reprise',
-      name: 'Ritorno nell\'Ombra',
+      id: 'kit_assassin_reprise',
+      name: "Ritorno nell'Ombra",
       trigger: 'onKill',
       targeting: 'self',
       actions: [{ kind: 'applyStatus', statusId: 'stealth', duration: 99, stacks: 1, onSelf: true }],
@@ -380,5 +304,11 @@ const ASSASSIN: UnitDef = {
   ],
 };
 
-export const HEROES: UnitDef[] = [HEALER, CASTER, DEFENDER, BLADE, THIEF, ASSASSIN];
-export const HERO_MAP: Record<string, UnitDef> = Object.fromEntries(HEROES.map((h) => [h.id, h]));
+export const ROLE_KITS: Record<Role, RoleKit> = {
+  healer: HEALER,
+  caster: CASTER,
+  defender: DEFENDER,
+  blade: BLADE,
+  thief: THIEF,
+  assassin: ASSASSIN,
+};

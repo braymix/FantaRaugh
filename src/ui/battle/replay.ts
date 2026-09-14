@@ -4,7 +4,7 @@
  * aggiornando barre HP, gauge, scudi e stati. Puro, senza React: testabile.
  */
 
-import type { BattleEvent, DamageType, Role, Side, UnitSnapshot } from '@engine/types';
+import type { BattleEvent, DamageType, MonType, Role, Side, UnitSnapshot } from '@engine/types';
 
 export interface FloatText {
   id: number;
@@ -26,6 +26,7 @@ export interface DisplayUnit {
   defId: string;
   name: string;
   role: Role;
+  types: MonType[];
   side: Side;
   row: string;
   hp: number;
@@ -61,6 +62,7 @@ function unitFromSnapshot(s: UnitSnapshot): DisplayUnit {
     defId: s.defId,
     name: s.name,
     role: s.role,
+    types: s.types,
     side: s.side,
     row: s.row,
     hp: s.hp,
@@ -109,6 +111,16 @@ function dmgLabel(type: DamageType): string {
   return type === 'physical' ? 'fisico' : 'magico';
 }
 
+/** Commento sull'efficacia di tipo: è l'informazione chiave da leggere a video. */
+function effLabel(mult: number): string {
+  if (mult === 0) return ' — IMMUNE';
+  if (mult >= 4) return ' — DEVASTANTE!';
+  if (mult >= 2) return ' — superefficace!';
+  if (mult <= 0.25) return ' — quasi nullo';
+  if (mult <= 0.5) return ' — poco efficace';
+  return '';
+}
+
 /** Applica un evento allo stato visivo (muta). Ritorna lo stato per comodità. */
 export function applyEvent(state: DisplayState, ev: BattleEvent): DisplayState {
   state.floats = [];
@@ -147,10 +159,20 @@ export function applyEvent(state: DisplayState, ev: BattleEvent): DisplayState {
       if (u) {
         u.hp = ev.hpAfter;
         if (ev.absorbed > 0) u.shield = Math.max(0, u.shield - ev.absorbed);
-        pushFloat(state, ev.target, `-${ev.amount}${ev.crit ? '!' : ''}`, ev.crit ? 'crit' : 'damage');
+        if (ev.effectiveness === 0) {
+          pushFloat(state, ev.target, 'IMMUNE', 'miss');
+        } else {
+          const mark = ev.effectiveness >= 2 ? '!!' : ev.crit ? '!' : '';
+          pushFloat(
+            state,
+            ev.target,
+            `-${ev.amount}${mark}`,
+            ev.crit || ev.effectiveness >= 2 ? 'crit' : 'damage',
+          );
+        }
       }
       state.logLines.push(
-        `${name(state, ev.source)} → ${name(state, ev.target)}: ${ev.amount} danno ${dmgLabel(ev.damageType)}${ev.crit ? ' (CRIT)' : ''}`,
+        `${name(state, ev.source)} → ${name(state, ev.target)}: ${ev.amount} danno ${dmgLabel(ev.damageType)} (${ev.element})${ev.crit ? ' CRIT' : ''}${effLabel(ev.effectiveness)}`,
       );
       break;
     }
@@ -237,6 +259,14 @@ export function applyEvent(state: DisplayState, ev: BattleEvent): DisplayState {
     case 'gauge': {
       const u = state.units[ev.target];
       if (u) u.gauge = ev.gaugeAfter;
+      break;
+    }
+    case 'overtime': {
+      for (const h of ev.hits) {
+        const u = state.units[h.uid];
+        if (u) u.hp = h.hpAfter;
+      }
+      state.logLines.push(`⏱ Overtime: il campo consuma tutti (${Math.round(ev.damagePct * 100)}% HP)`);
       break;
     }
     case 'death': {

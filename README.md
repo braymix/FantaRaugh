@@ -1,27 +1,43 @@
 # Fantaraugh
 
-RPG a squadre turn-based **roguelite** con **combattimenti automatici deterministici**,
-ruoli con meccaniche distintive, sistema di effetti componibile e dungeon a grafo
-ramificato. Web app (PWA), mobile-first, estetica **pixel-art**, offline-ready.
-Fantasy puro.
+**Roguelite autobattler** fantasy: recluti creature strada facendo, le fai evolvere e
+conquisti 8 medaglie, poi i Quattro Supremi e il Campione. I combattimenti sono
+**5v5 simultanei, automatici e deterministici**: le decisioni stanno prima e tra i
+fight. Web app (PWA), mobile-first, estetica **pixel-art**, offline-ready.
 
-> Vertical slice giocabile: schiera la squadra, equipaggia armi e perk, entra in un
-> dungeon generato da un seed, guarda i combattimenti riprodursi dal log di eventi.
-> **Ritenti e cresci**: se cadi tieni l'XP e riparti più forte; battuto il boss sale
-> l'Ascensione e la sfida con lei.
+> Scegli uno **starter**, percorri una mappa ramificata scegliendo i nodi (selvatici,
+> allenatori, oggetti, rifugi, maestri, palestre), costruisci la copertura di **tipi**
+> giusta e guarda i fight riprodursi dal log di eventi.
+>
+> La squadra muore con la run: restano le **essenze**, che si spendono su
+> potenziamenti permanenti delle **linee evolutive**. Ritenti, potenzi, riparti.
 
 ## Avvio rapido
 
 ```bash
 npm install
 npm run dev        # sviluppo (Vite)
-npm test           # test unitari (Vitest) — 57 test, incluso il determinismo
-npm run sim -- 1000  # simulazione di bilanciamento su 1000 battaglie
+npm test           # test unitari (Vitest) — 75 test, incluso il determinismo
+npm run sim -- 25    # simula run complete e riporta medaglie/nodi per starter
 npm run build      # build di produzione + service worker PWA
 npm run preview    # anteprima della build
 npm run lint       # ESLint
 npm run typecheck  # controllo dei tipi
 ```
+
+## Le meccaniche in breve
+
+- **Combattimento**: 5v5 simultaneo con barra d'azione (ATB). Sei **ruoli** con
+  meccaniche proprie (Curatore, Caster, Difensore, Combattente, Ladro, Nascosto).
+- **Tipi**: 10 tipi con debolezze, resistenze e immunità (fino a ×4 e ×0), più il
+  bonus stesso-tipo. Le 8 palestre sono a tema: la copertura decide.
+- **Squadra nella run**: parti solo, recluti chi batti (max 5, poi devi sostituire).
+  Gli HP **non** si rigenerano: i rifugi sono una scelta di percorso.
+- **Tre assi di crescita**: livello, evoluzione automatica, tier della mossa finale.
+- **Oggetti tenuti** con trade-off espliciti: niente scelte dominate.
+- **Anti-stall**: i fight lunghi accelerano e poi si chiudono da soli.
+- **Meta**: essenze → potenziamenti permanenti per linea evolutiva; tratti di
+  sinergia di tipo; **Nuzlocke** opzionale.
 
 ## Grafica
 
@@ -78,11 +94,12 @@ Nessuna modifica all'engine.
 
 ## Cosa c'è e cosa no (questa sessione)
 
-**C'è**: engine ATB completo, sistema di effetti + 6 ruoli, 6 eroi / 6 armi / 12 perk
-/ 8 nemici, dungeon a 5 layer con boss, schermate squadra / dungeon / battaglia,
-sprite pixel procedurali, schede effetto con anteprima delle statistiche, legenda di
-gioco, loop roguelite, salvataggio localStorage, 57 test, simulatore di bilanciamento,
-PWA offline.
+**C'è**: engine ATB deterministico, sistema di effetti + 6 kit di ruolo, tabella dei
+tipi, 43 creature su 19 linee evolutive, 14 oggetti con trade-off, mappa a 37 tappe
+con 8 palestre a tema + Quattro Supremi + Campione, reclutamenti/scambi/maestro di
+mosse, Nuzlocke, metaprogressione con potenziamenti di linea e tratti di tipo, sprite
+pixel procedurali, analizzatore di debolezze, legenda di gioco, salvataggio
+localStorage, **75 test**, simulatore di run complete, PWA offline.
 
-**Non ancora** (interfacce/hook predisposti): casse giornaliere, energia monetizzata,
-acquisti, fusione (vedi opzioni in `DESIGN.md`), audio, animazioni elaborate, backend.
+**Non ancora**: Battle Tower come modalità separata, sfide giornaliere, account/cloud
+save, audio, acquisti reali.

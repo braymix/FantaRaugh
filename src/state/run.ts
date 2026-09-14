@@ -1,22 +1,20 @@
 /**
- * Logica di una run nel dungeon: costruzione della battaglia da un nodo,
- * applicazione di HP di trascinamento tra i fight, e calcolo delle ricompense.
- * Separata dallo store per essere testabile in isolamento.
+ * Logica di una run: combattimenti dei nodi, esperienza, evoluzioni e ricompense.
+ * Separata dallo store per restare testabile in isolamento.
  */
 
 import { BALANCE } from '@content/balance';
-import { encounterToPlacements, type Dungeon, type DungeonNode } from '@content/dungeon';
-import { PERKS } from '@content/perks';
-import { WEAPONS } from '@content/weapons';
-import { buildBattleState } from '@engine/build';
-import { simulateBattle } from '@engine/battle';
+import { CREATURE_MAP } from '@content/creatures';
 import { REGISTRY } from '@content/registry';
-import type { BattleResult } from '@engine/types';
-import { buildPlayerPlacements } from './loadout';
+import { stageForLevel, type MapNode, type RunMap } from '@content/runmap';
+import { simulateBattle } from '@engine/battle';
+import { buildBattleState, type Placement } from '@engine/build';
+import type { BaseStats, BattleResult, GrowthCurve, UnitDef } from '@engine/types';
+import { buildTeamPlacements } from './party';
 import { grantXp } from './progression';
-import type { OwnedPerk, OwnedWeapon, PlayerProfile } from './types';
+import type { LineBuffs, RunMon, RunState } from './types';
 
-/** Hash stabile stringa → intero 32 bit, per derivare seed dei nodi. */
+/** Hash stabile stringa → intero 32 bit, per derivare i seed dei nodi. */
 function hashString(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {
@@ -26,144 +24,130 @@ function hashString(s: string): number {
   return h >>> 0;
 }
 
-export function nodeSeed(dungeonSeed: number, nodeId: string): number {
-  return (dungeonSeed ^ hashString(nodeId)) >>> 0;
+export function nodeSeed(runSeed: number, nodeId: string): number {
+  return (runSeed ^ hashString(nodeId)) >>> 0;
+}
+
+/**
+ * I nemici usano lo stesso catalogo del giocatore, ma con il moltiplicatore di
+ * potenza globale: è l'unico knob che regola la durezza dell'intero gioco.
+ */
+function scaleEnemy(def: UnitDef): UnitDef {
+  const k = BALANCE.enemyPowerScale;
+  const b: BaseStats = {
+    ...def.baseStats,
+    maxHp: Math.round(def.baseStats.maxHp * k),
+    atk: Math.round(def.baseStats.atk * k),
+    def: Math.round(def.baseStats.def * k),
+    resistance: Math.round(def.baseStats.resistance * k),
+  };
+  const perLevel: GrowthCurve['perLevel'] = {};
+  for (const [key, value] of Object.entries(def.growth.perLevel)) {
+    perLevel[key as keyof GrowthCurve['perLevel']] = Math.round((value ?? 0) * k * 10) / 10;
+  }
+  return { ...def, baseStats: b, growth: { perLevel } };
+}
+
+export function enemyPlacements(node: MapNode): Placement[] {
+  return node.encounter
+    .map((ref) => {
+      const def = CREATURE_MAP[ref.defId];
+      return def ? { def: scaleEnemy(def), level: ref.level, row: ref.row } : null;
+    })
+    .filter((p): p is Placement => p !== null);
 }
 
 export interface FightOutcome {
   result: BattleResult;
   won: boolean;
-  carryHp: Record<string, number>;
+  /** HP residui per uid, da riportare nella squadra. */
+  hpByUid: Record<string, number>;
+  faintedUids: string[];
 }
 
-/** Simula il fight di un nodo, applicando gli HP di trascinamento correnti. */
-export function runFight(profile: PlayerProfile, dungeon: Dungeon, node: DungeonNode): FightOutcome {
-  const playerPlacements = buildPlayerPlacements(profile);
-  const enemyPlacements = encounterToPlacements(node);
-  const state = buildBattleState(playerPlacements, enemyPlacements);
+export function runFight(run: RunState, map: RunMap, node: MapNode, lineBuffs: LineBuffs): FightOutcome {
+  const alive = run.team.filter((m) => !m.fainted);
+  const placements = buildTeamPlacements(run.team, lineBuffs);
+  const state = buildBattleState(placements, enemyPlacements(node));
 
-  // Applica gli HP residui della run (i fight non curano da soli).
-  const carry = profile.run?.carryHp ?? {};
-  for (const u of state.units) {
-    if (u.side !== 'player') continue;
-    const hp = carry[u.defId];
-    if (hp !== undefined) u.hp = Math.max(1, Math.min(u.base.maxHp, hp));
-  }
+  // Gli HP correnti si trascinano tra i combattimenti (niente cure gratis).
+  state.units
+    .filter((u) => u.side === 'player')
+    .forEach((u, i) => {
+      const mon = alive[i];
+      if (mon) u.hp = Math.max(1, Math.min(u.base.maxHp, mon.hp));
+    });
 
-  const result = simulateBattle(state, nodeSeed(dungeon.seed, node.id), REGISTRY);
+  const result = simulateBattle(state, nodeSeed(map.seed, node.id), REGISTRY);
   const won = result.winner === 'player';
 
-  const carryHp: Record<string, number> = { ...carry };
-  for (const snap of result.finalUnits) {
-    if (snap.side !== 'player') continue;
-    carryHp[snap.defId] = snap.alive ? snap.hp : 1; // i caduti tornano a 1 HP dopo la vittoria
-  }
+  const hpByUid: Record<string, number> = {};
+  const faintedUids: string[] = [];
+  result.finalUnits
+    .filter((s) => s.side === 'player')
+    .forEach((snap, i) => {
+      const mon = alive[i];
+      if (!mon) return;
+      hpByUid[mon.uid] = snap.alive ? snap.hp : 0;
+      if (!snap.alive) faintedUids.push(mon.uid);
+    });
 
-  return { result, won, carryHp };
+  return { result, won, hpByUid, faintedUids };
 }
 
-let instanceCounter = 0;
-function newInstanceId(prefix: string): string {
-  instanceCounter += 1;
-  return `${prefix}_${Date.now().toString(36)}_${instanceCounter}`;
+/** Esperienza di un nodo, in funzione della minaccia. */
+export function xpForNode(node: MapNode): number {
+  return BALANCE.xpPerThreat * Math.max(1, node.preview.threat) * (1 + node.segment * 0.35);
 }
 
-export interface RewardSummary {
-  gold: number;
-  gems: number;
-  xp: number;
-  newWeapon?: string;
-  newPerk?: string;
-}
-
-/**
- * Applica le ricompense di un nodo al profilo (muta). XP va a eroi in squadra e
- * alle rispettive armi/perk equipaggiati. Nessun oggetto finto: le ricompense
- * "arma/perk" creano istanze reali dal catalogo.
- */
-export function grantNodeRewards(profile: PlayerProfile, node: DungeonNode): RewardSummary {
-  const summary: RewardSummary = { gold: 0, gems: 0, xp: 0 };
-  const threat = Math.max(1, node.threat);
-
-  // XP di base per aver completato il nodo (se combattimento).
-  if (node.encounter.length > 0) {
-    const xp = BALANCE.xpPerThreat * threat;
-    summary.xp = xp;
-    grantTeamXp(profile, xp);
-  }
-
-  switch (node.rewardKind) {
-    case 'gold': {
-      const gold = BALANCE.goldPerThreat * threat;
-      profile.currencies.gold += gold;
-      summary.gold += gold;
-      break;
-    }
-    case 'item': {
-      profile.currencies.gems += 10;
-      summary.gems += 10;
-      break;
-    }
-    case 'xp': {
-      const bonus = BALANCE.xpPerThreat * threat;
-      summary.xp += bonus;
-      grantTeamXp(profile, bonus);
-      break;
-    }
-    case 'weapon': {
-      const def = WEAPONS[hashString(node.id) % WEAPONS.length]!;
-      const w: OwnedWeapon = {
-        instanceId: newInstanceId('wp'),
-        defId: def.id,
-        level: 1,
-        xp: 0,
-        perkSlots: Array.from({ length: BALANCE.raritySlots[def.rarity] }, () => null),
-      };
-      profile.weapons.push(w);
-      summary.newWeapon = def.name;
-      break;
-    }
-    case 'perk': {
-      const def = PERKS[hashString(node.id) % PERKS.length]!;
-      const p: OwnedPerk = { instanceId: newInstanceId('pk'), defId: def.id, level: 1, xp: 0 };
-      profile.perks.push(p);
-      summary.newPerk = def.name;
-      break;
-    }
-    default:
-      break;
-  }
-
-  return summary;
+/** Essenze (valuta meta) guadagnate ripulendo un nodo. */
+export function essenceForNode(node: MapNode): number {
+  if (node.kind === 'champion') return BALANCE.essenceOnChampion;
+  if (node.kind === 'gym') return BALANCE.essencePerBadge;
+  return BALANCE.essencePerNode * Math.max(1, node.preview.threat);
 }
 
 /**
- * Consolazione roguelite dopo una sconfitta: XP e oro proporzionali ai nodi già
- * ripuliti (+1, così anche una run corta lascia qualcosa). È il motore del
- * "ritenti e cresci": ogni tentativo rende la squadra un po' più forte.
+ * Applica XP alla squadra e fa evolvere chi ha raggiunto il livello richiesto.
+ * Ritorna gli id delle creature evolute (per mostrarlo al giocatore).
  */
-export function grantDefeatConsolation(profile: PlayerProfile, clearedNodes: number): RewardSummary {
-  const steps = clearedNodes + 1;
-  const xp = BALANCE.defeatConsolationXpPerNode * steps;
-  const gold = BALANCE.defeatConsolationGoldPerNode * steps;
-  grantTeamXp(profile, xp);
-  profile.currencies.gold += gold;
-  return { gold, gems: 0, xp };
-}
-
-function grantTeamXp(profile: PlayerProfile, xp: number): void {
-  for (const defId of profile.team) {
-    const h = profile.heroes.find((x) => x.defId === defId);
-    if (!h) continue;
-    grantXp(h, xp);
-    const w = profile.weapons.find((x) => x.instanceId === h.weaponInstanceId);
-    if (w) {
-      grantXp(w, Math.round(xp * 0.6));
-      for (const slot of w.perkSlots) {
-        if (!slot) continue;
-        const p = profile.perks.find((x) => x.instanceId === slot);
-        if (p) grantXp(p, Math.round(xp * 0.4));
-      }
+export function grantTeamXp(team: RunMon[], xp: number): { uid: string; from: string; to: string }[] {
+  const evolved: { uid: string; from: string; to: string }[] = [];
+  for (const mon of team) {
+    if (mon.fainted) continue;
+    grantXp(mon, Math.round(xp));
+    // Evoluzioni a catena: un salto di più livelli può attraversare due stadi.
+    for (;;) {
+      const def = CREATURE_MAP[mon.defId];
+      const evo = def?.evolution;
+      if (!evo || mon.level < evo.atLevel) break;
+      const next = CREATURE_MAP[evo.toId];
+      if (!next) break;
+      evolved.push({ uid: mon.uid, from: mon.defId, to: evo.toId });
+      mon.defId = evo.toId;
+      // L'evoluzione alza gli HP massimi: il guadagno va in HP correnti.
+      mon.hp = Math.round(mon.hp * 1.2);
     }
   }
+  return evolved;
+}
+
+let counter = 0;
+/** Crea una creatura per la squadra (starter, reclutamento, scambio). */
+export function makeRunMon(defId: string, level: number, row?: RunMon['row']): RunMon {
+  counter += 1;
+  const resolved = stageForLevel(defId, level);
+  const def = CREATURE_MAP[resolved] ?? CREATURE_MAP[defId]!;
+  const role = def.role;
+  return {
+    uid: `m${Date.now().toString(36)}_${counter}`,
+    defId: def.id,
+    level,
+    xp: 0,
+    hp: 0, // lo store lo porta subito a pieno con healFull()
+    itemId: null,
+    moveTier: 1,
+    row: row ?? (role === 'defender' || role === 'blade' ? 'front' : 'back'),
+    fainted: false,
+  };
 }

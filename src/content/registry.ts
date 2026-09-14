@@ -7,6 +7,7 @@
 import type { EngineConfig, Registry } from '@engine/types';
 import { BALANCE } from './balance';
 import { STATUS_MAP } from './statuses';
+import { typeEffectiveness } from './typechart';
 
 export const ENGINE_CONFIG: EngineConfig = {
   actionThreshold: BALANCE.actionThreshold,
@@ -19,9 +20,15 @@ export const ENGINE_CONFIG: EngineConfig = {
   defenderEnergyOnDamaged: BALANCE.defenderEnergyOnDamaged,
   maxTriggerDepth: BALANCE.maxTriggerDepth,
   maxTurns: BALANCE.maxTurns,
+  stallSpeedUpTurn: BALANCE.stallSpeedUpTurn,
+  stallDamageMult: BALANCE.stallDamageMult,
+  overtimeTurn: BALANCE.overtimeTurn,
+  overtimeDamagePct: BALANCE.overtimeDamagePct,
+  sameTypeBonus: BALANCE.sameTypeBonus,
 };
 
 export const REGISTRY: Registry = {
   statuses: STATUS_MAP,
   config: ENGINE_CONFIG,
+  effectiveness: typeEffectiveness,
 };

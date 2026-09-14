@@ -22,6 +22,22 @@ export type Role =
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
+/**
+ * Tipo elementale. Si affianca a DamageType (fisico/magico): il tipo determina il
+ * moltiplicatore di efficacia, fisico/magico quale difesa mitiga.
+ */
+export type MonType =
+  | 'fuoco'
+  | 'acqua'
+  | 'natura'
+  | 'fulmine'
+  | 'ghiaccio'
+  | 'roccia'
+  | 'ombra'
+  | 'luce'
+  | 'acciaio'
+  | 'veleno';
+
 /** Tag semantici condivisi: permettono agli effetti di interagire tra loro. */
 export type Tag =
   | 'fire'
@@ -163,6 +179,12 @@ export type Action =
       kind: 'damage';
       power: number; // moltiplicatore su atk
       damageType: DamageType;
+      /**
+       * Tipo elementale del colpo. Se omesso usa il tipo primario di chi attacca:
+       * così un kit di ruolo resta riusabile da creature di tipi diversi e prende
+       * automaticamente il bonus "stesso tipo".
+       */
+      element?: MonType;
       tags?: Tag[];
       hits?: number; // colpi multipli (default 1)
       defIgnorePct?: number; // ignora una frazione della stat difensiva (0..1)
@@ -213,6 +235,12 @@ export interface UnitDef {
   name: string;
   role: Role;
   rarity: Rarity;
+  /** Uno o due tipi elementali. Il primo è il primario (bonus stesso tipo). */
+  types: MonType[];
+  /** Linea evolutiva a cui appartiene: i potenziamenti permanenti valgono per linea. */
+  line: string;
+  /** Evoluzione automatica al raggiungimento del livello. */
+  evolution?: { toId: string; atLevel: number };
   baseStats: BaseStats;
   growth: GrowthCurve;
   ability: Effect; // attiva, gated dall'energia
@@ -228,6 +256,7 @@ export interface Unit {
   defId: string;
   name: string;
   role: Role;
+  types: MonType[];
   side: Side;
   row: Row;
   slot: number; // posizione, usata per il tie-break deterministico
@@ -255,6 +284,7 @@ export interface UnitSnapshot {
   defId: string;
   name: string;
   role: Role;
+  types: MonType[];
   side: Side;
   row: Row;
   hp: number;
@@ -294,6 +324,9 @@ export type BattleEvent =
       amount: number;
       crit: boolean;
       damageType: DamageType;
+      element: MonType;
+      /** Moltiplicatore di tipo applicato (0, 0.25, 0.5, 1, 2, 4). */
+      effectiveness: number;
       tags: Tag[];
       absorbed: number;
       hpAfter: number;
@@ -318,6 +351,12 @@ export type BattleEvent =
   | { t: 'energy'; target: string; delta: number; energyAfter: number }
   | { t: 'stack'; target: string; stack: string; amount: number; total: number }
   | { t: 'stealBuff'; source: string; target: string; statusId: string; name: string }
+  | {
+      t: 'overtime';
+      turn: number;
+      damagePct: number;
+      hits: { uid: string; amount: number; hpAfter: number }[];
+    }
   | { t: 'death'; uid: string }
   | { t: 'battleEnd'; winner: Side | 'draw'; turns: number };
 
@@ -359,6 +398,16 @@ export interface EngineConfig {
   defenderEnergyOnDamaged: number;
   maxTriggerDepth: number;
   maxTurns: number;
+  /** Turno da cui il combattimento accelera (i danni crescono). */
+  stallSpeedUpTurn: number;
+  /** Turno da cui parte l'overtime: danno crescente a tutti, per forzare la chiusura. */
+  overtimeTurn: number;
+  /** Danno da overtime per turno, in frazione degli HP massimi. */
+  overtimeDamagePct: number;
+  /** Moltiplicatore di danno applicato dopo stallSpeedUpTurn. */
+  stallDamageMult: number;
+  /** Bonus quando l'elemento del colpo coincide con un tipo di chi attacca. */
+  sameTypeBonus: number;
 }
 
 /**
@@ -369,4 +418,6 @@ export interface EngineConfig {
 export interface Registry {
   statuses: Record<string, StatusDef>;
   config: EngineConfig;
+  /** Efficacia di tipo, iniettata dai contenuti (l'engine resta agnostico). */
+  effectiveness: (attack: MonType, defense: MonType[]) => number;
 }

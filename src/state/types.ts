@@ -1,74 +1,66 @@
 /**
- * Tipi del meta-gioco e dello stato persistito. In questa fase molti sistemi
- * (casse, valute premium, fusione) esistono SOLO come tipi/hook: la loro logica
- * verrà innestata qui senza riscrivere il resto.
+ * Stato del gioco, diviso in due piani (come in Pokelike):
+ *  - META persistente: essenze e potenziamenti permanenti sulle linee evolutive;
+ *  - RUN temporanea: la squadra si costruisce durante il viaggio e muore con esso.
  */
 
-import type { Row } from '@engine/types';
+import type { Row, StatKey } from '@engine/types';
 
-export interface OwnedHero {
+/** Una creatura della squadra corrente. Esiste solo dentro la run. */
+export interface RunMon {
+  uid: string;
   defId: string;
   level: number;
   xp: number;
-  /** instanceId dell'arma equipaggiata, o null. */
-  weaponInstanceId: string | null;
+  /** HP correnti: si trascinano da un combattimento al successivo. */
+  hp: number;
+  /** Oggetto tenuto (uno solo). */
+  itemId: string | null;
+  /** Tier della mossa finale (1..3), alzato dal Maestro di Mosse. */
+  moveTier: number;
   row: Row;
+  /** In Nuzlocke, chi cade è perso per sempre. */
+  fainted: boolean;
 }
 
-export interface OwnedWeapon {
-  instanceId: string;
-  defId: string;
-  level: number;
-  xp: number;
-  /** Slot perk: array lungo quanto gli slot dell'arma; null = slot vuoto. */
-  perkSlots: (string | null)[]; // valori = instanceId di OwnedPerk
-}
+/** Decisione in sospeso generata da un nodo: la run attende una scelta. */
+export type PendingChoice =
+  | { kind: 'recruit'; defId: string; level: number }
+  | { kind: 'item'; offers: string[] }
+  | { kind: 'ball'; offers: string[]; level: number }
+  | { kind: 'tutor' }
+  | { kind: 'trade'; defId: string; level: number };
 
-export interface OwnedPerk {
-  instanceId: string;
-  defId: string;
-  level: number;
-  xp: number;
-}
-
-export interface Currencies {
-  gold: number; // valuta soft
-  gems: number; // valuta premium (NESSUN acquisto reale in questa fase)
-}
-
-export interface EnergyState {
-  current: number;
-  max: number;
-  /** Timestamp (ms) dell'ultima rigenerazione calcolata. */
-  lastRefillAt: number;
-}
-
-/** Progresso di una run nel dungeon corrente. */
 export interface RunState {
-  dungeonSeed: number;
-  currentNodeId: string | null; // null = deve ancora scegliere il primo nodo
+  seed: number;
+  team: RunMon[];
+  /** Oggetti raccolti e non ancora assegnati. */
+  bag: string[];
+  currentNodeId: string | null;
   clearedNodeIds: string[];
-  /** HP residui degli eroi tra un fight e l'altro (defId -> hp). */
-  carryHp: Record<string, number>;
+  badges: number;
+  nuzlocke: boolean;
   active: boolean;
+  /** Se la squadra è piena, il reclutamento richiede di scegliere chi sostituire. */
+  pending: PendingChoice | null;
 }
 
-export interface PlayerProfile {
+/** Punti di potenziamento permanente, per linea evolutiva e statistica. */
+export type LineBuffs = Record<string, Partial<Record<StatKey, number>>>;
+
+export interface MetaProfile {
   version: number;
-  heroes: OwnedHero[];
-  weapons: OwnedWeapon[];
-  perks: OwnedPerk[];
-  currencies: Currencies;
-  energy: EnergyState;
-  /** defId degli eroi schierati, in ordine. */
-  team: string[];
+  /** Valuta meta: si guadagna giocando, si spende sui potenziamenti di linea. */
+  essence: number;
+  lineBuffs: LineBuffs;
+  /** Preferenza: la prossima run parte in Nuzlocke. */
+  nuzlocke: boolean;
+  records: {
+    runs: number;
+    bestBadges: number;
+    championWins: number;
+  };
+  /** Creature incontrate almeno una volta (collezione/bestiario). */
+  seen: string[];
   run: RunState | null;
-  /**
-   * Ascensione roguelite: sale ogni volta che si batte il boss. Aumenta il livello
-   * dei dungeon successivi — così "ritenti e cresci" ha sempre una prossima sfida.
-   */
-  ascension: number;
-  /** Statistiche di meta-progressione, per dare senso ai tentativi ripetuti. */
-  runsAttempted: number;
-  bossKills: number;
 }

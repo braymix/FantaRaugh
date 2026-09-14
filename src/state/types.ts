@@ -63,4 +63,12 @@ export interface PlayerProfile {
   /** defId degli eroi schierati, in ordine. */
   team: string[];
   run: RunState | null;
+  /**
+   * Ascensione roguelite: sale ogni volta che si batte il boss. Aumenta il livello
+   * dei dungeon successivi — così "ritenti e cresci" ha sempre una prossima sfida.
+   */
+  ascension: number;
+  /** Statistiche di meta-progressione, per dare senso ai tentativi ripetuti. */
+  runsAttempted: number;
+  bossKills: number;
 }

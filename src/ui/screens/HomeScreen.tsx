@@ -20,11 +20,18 @@ export function HomeScreen() {
       </div>
 
       <div className="card w-full max-w-xs text-left text-sm">
-        <Row label="Eroi" value={`${profile.heroes.length}`} />
+        <Row label="Ascensione" value={`${profile.ascension}`} />
+        <Row label="Boss battuti" value={`${profile.bossKills}`} />
+        <Row label="Tentativi" value={`${profile.runsAttempted}`} />
         <Row label="Energia" value={`${profile.energy.current}/${profile.energy.max}`} />
         <Row label="Oro" value={`${profile.currencies.gold} 🪙`} />
         <Row label="Gemme" value={`${profile.currencies.gems} 💎`} />
       </div>
+      <p className="-mt-3 max-w-xs text-[11px] leading-snug text-white/40">
+        Roguelite: se cadi, la squadra tiene l'esperienza guadagnata e riparte un po'
+        più forte. Ritenta finché non batti il boss — poi l'Ascensione sale e la sfida
+        con lei.
+      </p>
 
       <div className="flex w-full max-w-xs flex-col gap-2">
         {runActive ? (

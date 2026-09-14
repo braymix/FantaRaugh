@@ -12,7 +12,7 @@ import { defaultStorage, type StorageAdapter } from './storage';
 import { loadProfile, saveProfile } from './save';
 import { createDefaultProfile } from './profile';
 import type { PlayerProfile } from './types';
-import { grantNodeRewards, runFight, type RewardSummary } from './run';
+import { grantDefeatConsolation, grantNodeRewards, runFight, type RewardSummary } from './run';
 import { grantXp } from './progression';
 
 export type Screen = 'home' | 'team' | 'dungeon' | 'battle';
@@ -48,6 +48,15 @@ interface GameState {
 const TRAIN_COST = 60; // oro per sessione di addestramento
 const TRAIN_XP = 400;
 
+/** Livello base dei nemici in funzione dell'ascensione (roguelite). */
+function dungeonBaseLevelFor(ascension: number): number {
+  return BALANCE.dungeonBaseLevel + ascension * BALANCE.ascensionLevelStep;
+}
+
+function dungeonName(ascension: number): string {
+  return ascension > 0 ? `Cripta di Raugh — Ascensione ${ascension}` : 'Cripta di Raugh';
+}
+
 function refillEnergy(profile: PlayerProfile, now: number): void {
   const { energy } = profile;
   if (energy.current >= energy.max) {
@@ -75,8 +84,14 @@ export const useGame = create<GameState>((set, get) => ({
     const storage = get().storage;
     const profile = loadProfile(storage);
     refillEnergy(profile, Date.now());
-    // Ripristina un dungeon in corso, se la run è attiva.
-    const dungeon = profile.run?.active ? generateDungeon(profile.run.dungeonSeed) : null;
+    // Ripristina un dungeon in corso, se la run è attiva (stesso seed + stesso
+    // livello base ⇒ dungeon identico).
+    const dungeon = profile.run?.active
+      ? generateDungeon(profile.run.dungeonSeed, {
+          name: dungeonName(profile.ascension),
+          baseLevel: dungeonBaseLevelFor(profile.ascension),
+        })
+      : null;
     set({ profile, dungeon });
     saveProfile(storage, profile);
   },
@@ -169,6 +184,7 @@ export const useGame = create<GameState>((set, get) => ({
       return false;
     }
     profile.energy.current -= BALANCE.energyPerRun;
+    profile.runsAttempted += 1;
     const actualSeed = seed ?? (Date.now() >>> 0);
     profile.run = {
       dungeonSeed: actualSeed,
@@ -177,7 +193,10 @@ export const useGame = create<GameState>((set, get) => ({
       carryHp: {},
       active: true,
     };
-    const dungeon = generateDungeon(actualSeed);
+    const dungeon = generateDungeon(actualSeed, {
+      name: dungeonName(profile.ascension),
+      baseLevel: dungeonBaseLevelFor(profile.ascension),
+    });
     set({ profile, dungeon, screen: 'dungeon', lastBattle: null, lastReward: null });
     get().persist();
     return true;
@@ -204,11 +223,20 @@ export const useGame = create<GameState>((set, get) => ({
         profile.run.clearedNodeIds.push(nodeId);
         profile.run.currentNodeId = nodeId;
         profile.run.carryHp = outcome.carryHp;
-        if (node.type === 'boss') profile.run.active = false;
+        if (node.type === 'boss') {
+          // Boss battuto: ascensione +1 → il prossimo dungeon è più duro.
+          profile.run.active = false;
+          profile.ascension += 1;
+          profile.bossKills += 1;
+        }
         set({ profile, lastBattle: outcome.result, lastReward: reward, screen: 'battle' });
       } else {
+        // Sconfitta: consolazione roguelite proporzionale a quanto si è arrivati,
+        // così ogni tentativo lascia comunque un po' di crescita permanente.
         profile.run.active = false;
-        set({ profile, lastBattle: outcome.result, lastReward: null, screen: 'battle' });
+        const cleared = profile.run.clearedNodeIds.length;
+        const reward = grantDefeatConsolation(profile, cleared);
+        set({ profile, lastBattle: outcome.result, lastReward: reward, screen: 'battle' });
       }
     } else {
       // Nodo non combattivo: si risolve subito.

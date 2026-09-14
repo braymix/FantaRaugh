@@ -1,0 +1,36 @@
+# Blueprint Render per Fantaraugh (Static Site).
+#
+# La demo NON ha backend: lo stato del giocatore è salvato in localStorage nel
+# browser (vedi src/state/storage.ts). Su un Static Site questo è esattamente ciò
+# che serve — i salvataggi persistono nel browser dell'utente, senza database.
+# (Un "DB che non persiste" capita quando si usa un disco effimero o un servizio
+#  che si riavvia: qui non serve alcun DB.)
+#
+# Deploy: connetti il repo su Render → "New +" → "Blueprint" → seleziona questo file.
+services:
+  - type: web
+    name: fantaraugh
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: true
+    envVars:
+      - key: NODE_VERSION
+        value: '22.22.2'
+    # SPA a pagina singola: ogni percorso serve index.html.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # L'app-shell e il service worker non vanno cache-ati a lungo, così gli
+      # aggiornamenti arrivano subito; gli asset con hash restano immutabili.
+      - path: /index.html
+        name: Cache-Control
+        value: 'no-cache'
+      - path: /sw.js
+        name: Cache-Control
+        value: 'no-cache'
+      - path: /assets/*
+        name: Cache-Control
+        value: 'public, max-age=31536000, immutable'

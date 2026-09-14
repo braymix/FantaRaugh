@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { BALANCE } from '@content/balance';
 import { generateDungeon } from '@content/dungeon';
 import { createDefaultProfile } from './profile';
-import { grantNodeRewards, nodeSeed, runFight } from './run';
+import { grantDefeatConsolation, grantNodeRewards, nodeSeed, runFight } from './run';
 import { grantXp, xpForNextLevel } from './progression';
 
 describe('progressione XP', () => {
@@ -26,12 +27,25 @@ describe('run nel dungeon', () => {
 
   it('la squadra iniziale supera il primo scontro del dungeon', () => {
     const profile = createDefaultProfile();
-    const dungeon = generateDungeon(12345, { baseLevel: 5 });
+    // Condizioni reali di partenza (ascensione 0): il primo nodo non è un muro.
+    const dungeon = generateDungeon(12345, { baseLevel: BALANCE.dungeonBaseLevel });
     const first = dungeon.nodes[dungeon.startIds[0]!]!;
     profile.run = { dungeonSeed: dungeon.seed, currentNodeId: null, clearedNodeIds: [], carryHp: {}, active: true };
     const outcome = runFight(profile, dungeon, first);
     expect(outcome.won).toBe(true);
     expect(Object.keys(outcome.carryHp).length).toBeGreaterThan(0);
+  });
+
+  it('la sconfitta lascia comunque crescita (loop roguelite "ritenti e cresci")', () => {
+    const profile = createDefaultProfile();
+    const startLevelSum = profile.heroes.reduce((a, h) => a + h.level + h.xp, 0);
+    const goldBefore = profile.currencies.gold;
+    const summary = grantDefeatConsolation(profile, 2); // 2 nodi ripuliti prima di cadere
+    expect(summary.xp).toBeGreaterThan(0);
+    expect(summary.gold).toBeGreaterThan(0);
+    expect(profile.currencies.gold).toBe(goldBefore + summary.gold);
+    const endLevelSum = profile.heroes.reduce((a, h) => a + h.level + h.xp, 0);
+    expect(endLevelSum).toBeGreaterThan(startLevelSum); // la squadra è più forte di prima
   });
 
   it('le ricompense danno XP alla squadra e valuta', () => {

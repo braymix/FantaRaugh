@@ -13,6 +13,7 @@ export function BattleScreen() {
   const reward = useGame((s) => s.lastReward);
   const run = useGame((s) => s.profile.run);
   const navigate = useGame((s) => s.navigate);
+  const newDungeon = useGame((s) => s.newDungeon);
 
   const events = battle?.events ?? [];
   const replay = useReplay(events, BALANCE.actionThreshold);
@@ -102,8 +103,9 @@ export function BattleScreen() {
             <div className="mb-2 font-display text-2xl">
               {won ? '🏆 Vittoria' : display.winner === 'enemy' ? '💀 Sconfitta' : '⏳ Pareggio'}
             </div>
-            {won && reward && (
+            {reward && (reward.xp > 0 || reward.gold > 0 || reward.gems > 0) && (
               <div className="mb-3 space-y-0.5 text-sm text-white/70">
+                {!won && <div className="text-white/50">La squadra impara dalla sconfitta:</div>}
                 {reward.xp > 0 && <div>+{reward.xp} XP alla squadra</div>}
                 {reward.gold > 0 && <div className="text-gold">+{reward.gold} oro</div>}
                 {reward.gems > 0 && <div className="text-fuchsia-300">+{reward.gems} gemme</div>}
@@ -116,10 +118,24 @@ export function BattleScreen() {
               <button className="btn-primary w-full" onClick={() => navigate('dungeon')}>
                 Continua il dungeon
               </button>
-            ) : (
+            ) : won ? (
               <button className="btn-primary w-full" onClick={() => navigate('home')}>
-                {won ? 'Dungeon completato! Torna alla base' : 'Torna alla base'}
+                Dungeon completato! Torna alla base
               </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <button
+                  className="btn-primary w-full"
+                  onClick={() => {
+                    if (!newDungeon()) navigate('home');
+                  }}
+                >
+                  Riprova (più forti di prima)
+                </button>
+                <button className="btn-ghost w-full" onClick={() => navigate('home')}>
+                  Torna alla base
+                </button>
+              </div>
             )}
           </div>
         </div>

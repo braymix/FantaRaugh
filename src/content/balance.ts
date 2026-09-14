@@ -55,6 +55,22 @@ export const BALANCE = {
   /** Minuti per rigenerare 1 punto energia. */
   energyRefillMinutes: 10,
 
+  // --- Roguelite: "ritenti e cresci" ---
+  /** Livello nemici del primo layer di un dungeon di ascensione 0. */
+  dungeonBaseLevel: 3,
+  /** Quanto sale il livello dei nemici per ogni ascensione (boss battuto). */
+  ascensionLevelStep: 3,
+  /** XP di consolazione a fine run persa, per ogni nodo già ripulito (+1). */
+  defeatConsolationXpPerNode: 60,
+  /** Oro di consolazione a fine run persa, per ogni nodo già ripulito. */
+  defeatConsolationGoldPerNode: 12,
+  /**
+   * Potenza globale dei nemici (HP/ATK/DIF/RES e relativa crescita). Unico knob
+   * per rendere i nemici competitivi a pari livello: alto ⇒ dungeon più duro ⇒
+   * più tentativi/crescita necessari (roguelite).
+   */
+  enemyPowerScale: 2.6,
+
   // --- Rarità: slot perk sulle armi e moltiplicatore di potenza effetti ---
   raritySlots: {
     common: 1,

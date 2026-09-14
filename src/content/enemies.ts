@@ -5,10 +5,39 @@
  */
 
 import type { UnitDef } from '@engine/types';
+import { BALANCE } from './balance';
 
 const flatGrowth = (hp: number, atk: number, def: number) => ({
   perLevel: { maxHp: hp, atk, def },
 });
+
+/**
+ * Applica il moltiplicatore di potenza nemici (balance.enemyPowerScale) alle stat
+ * di combattimento e alla crescita. Le stat "raw" nei def restano leggibili; il
+ * bilanciamento globale si regola da un unico numero.
+ */
+function scaleEnemy(def: UnitDef): UnitDef {
+  const k = BALANCE.enemyPowerScale;
+  const b = def.baseStats;
+  return {
+    ...def,
+    baseStats: {
+      ...b,
+      maxHp: Math.round(b.maxHp * k),
+      atk: Math.round(b.atk * k),
+      def: Math.round(b.def * k),
+      resistance: Math.round(b.resistance * k),
+    },
+    growth: {
+      perLevel: {
+        ...def.growth.perLevel,
+        maxHp: Math.round((def.growth.perLevel.maxHp ?? 0) * k),
+        atk: Math.round((def.growth.perLevel.atk ?? 0) * k),
+        def: Math.round((def.growth.perLevel.def ?? 0) * k),
+      },
+    },
+  };
+}
 
 const GOBLIN_GRUNT: UnitDef = {
   id: 'enemy_goblin_grunt',
@@ -224,6 +253,6 @@ export const ENEMIES: UnitDef[] = [
   DARK_ACOLYTE,
   VENOM_SPIDER,
   SHADOW_LICH,
-];
+].map(scaleEnemy);
 export const ENEMY_MAP: Record<string, UnitDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 export const BOSS_ID = SHADOW_LICH.id;

@@ -137,6 +137,20 @@ export function grantNodeRewards(profile: PlayerProfile, node: DungeonNode): Rew
   return summary;
 }
 
+/**
+ * Consolazione roguelite dopo una sconfitta: XP e oro proporzionali ai nodi già
+ * ripuliti (+1, così anche una run corta lascia qualcosa). È il motore del
+ * "ritenti e cresci": ogni tentativo rende la squadra un po' più forte.
+ */
+export function grantDefeatConsolation(profile: PlayerProfile, clearedNodes: number): RewardSummary {
+  const steps = clearedNodes + 1;
+  const xp = BALANCE.defeatConsolationXpPerNode * steps;
+  const gold = BALANCE.defeatConsolationGoldPerNode * steps;
+  grantTeamXp(profile, xp);
+  profile.currencies.gold += gold;
+  return { gold, gems: 0, xp };
+}
+
 function grantTeamXp(profile: PlayerProfile, xp: number): void {
   for (const defId of profile.team) {
     const h = profile.heroes.find((x) => x.defId === defId);

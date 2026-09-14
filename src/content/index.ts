@@ -8,4 +8,6 @@ export { HEROES, HERO_MAP } from './heroes';
 export { WEAPONS, WEAPON_MAP } from './weapons';
 export { PERKS, PERK_MAP } from './perks';
 export { ENEMIES, ENEMY_MAP, BOSS_ID } from './enemies';
+export { generateDungeon, encounterToPlacements } from './dungeon';
+export type { Dungeon, DungeonNode, NodeType, RewardKind, NodePreview } from './dungeon';
 export type { WeaponDef, PerkDef, WeaponType } from './types';

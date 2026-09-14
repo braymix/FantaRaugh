@@ -38,6 +38,22 @@ export const BALANCE = {
   xpBase: 100,
   xpExponent: 1.5,
   maxLevel: 60,
+  /** Quanto scalano i modificatori dell'arma per livello (0.08 = +8%/livello). */
+  weaponStatPerLevel: 0.08,
+  /** Quanto scala la potenza numerica di un perk per livello. */
+  perkPowerPerLevel: 0.06,
+  /** Bonus alla resa dell'arma se il ruolo ha affinità con essa. */
+  weaponAffinityBonus: 0.15,
+  /** XP assegnata a fine fight, per livello di minaccia del nodo. */
+  xpPerThreat: 40,
+  /** Oro assegnato a fine fight, per livello di minaccia. */
+  goldPerThreat: 25,
+
+  // --- Meta: energia/tentativi (interfacce pronte, non monetizzate) ---
+  energyMax: 20,
+  energyPerRun: 3,
+  /** Minuti per rigenerare 1 punto energia. */
+  energyRefillMinutes: 10,
 
   // --- Rarità: slot perk sulle armi e moltiplicatore di potenza effetti ---
   raritySlots: {

@@ -343,7 +343,7 @@ const ASSASSIN: UnitDef = {
     targeting: 'backRowEnemySingle',
     energyCost: 100,
     actions: [
-      { kind: 'damage', power: 2.4, damageType: 'physical', tags: ['physical', 'shadow'] },
+      { kind: 'damage', power: 1.9, damageType: 'physical', tags: ['physical', 'shadow'] },
       { kind: 'applyStatus', statusId: 'bleed', duration: 4, stacks: 2 },
     ],
   },

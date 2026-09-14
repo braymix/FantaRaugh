@@ -144,8 +144,8 @@ export const STATUSES: StatusDef[] = [
     tags: ['buff', 'shadow'],
     maxStacks: 1,
     statMods: [
-      { stat: 'critRate', mode: 'add', value: 0.5 },
-      { stat: 'critDamage', mode: 'add', value: 0.5 },
+      { stat: 'critRate', mode: 'add', value: 0.35 },
+      { stat: 'critDamage', mode: 'add', value: 0.35 },
     ],
   },
 ];

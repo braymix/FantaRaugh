@@ -276,6 +276,10 @@ export function applyEvent(state: DisplayState, ev: BattleEvent): DisplayState {
         u.hp = 0;
         u.shield = 0;
         u.statuses = [];
+        // Un caduto non è più in gioco: niente barra d'azione carica (sembrerebbe
+        // pronto ad agire) né evidenziazione "sta agendo" se muore nel suo turno.
+        u.gauge = 0;
+        u.acting = false;
       }
       state.logLines.push(`☠ ${name(state, ev.uid)} è caduto`);
       break;

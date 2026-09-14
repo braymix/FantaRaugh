@@ -55,11 +55,25 @@ export function useReplay(events: BattleEvent[], threshold: number): ReplayApi {
 
   const advanceOneBeat = useCallback(() => {
     let appliedVisual = false;
+    let killingDamageUid: string | null = null;
     while (idxRef.current < events.length - 1 && !appliedVisual) {
       idxRef.current += 1;
       const ev = events[idxRef.current]!;
+      // Detect when damage brings a unit to 0 HP: batch it with the death event.
+      if (ev.t === 'damage' && killingDamageUid === null) {
+        const unit = stateRef.current.units[ev.target];
+        if (unit && ev.hpAfter <= 0) killingDamageUid = ev.target;
+      }
       applyEvent(stateRef.current, ev);
-      if (VISUAL.has(ev.t)) appliedVisual = true;
+      // Only pause on VISUAL events if we're not waiting for a death event.
+      if (VISUAL.has(ev.t)) {
+        if (killingDamageUid && ev.t === 'death' && ev.uid === killingDamageUid) {
+          killingDamageUid = null;
+          appliedVisual = true;
+        } else if (!killingDamageUid) {
+          appliedVisual = true;
+        }
+      }
     }
     if (idxRef.current >= events.length - 1) setPlaying(false);
     rerender();

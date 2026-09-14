@@ -190,15 +190,41 @@ mani nude), ma il Difensore parte leggermente più forte; da monitorare.
 - **Juice**: scossa sul colpo, lampo sul critico, respiro d'attesa, alone su chi
   agisce; tutto disattivato con `prefers-reduced-motion`.
 - **Leggibilità**: schede effetto strutturate, stati con nome (non solo icona),
-  efficacia di tipo scritta nel log, legenda "Come si gioca" sempre accessibile.
+  efficacia di tipo scritta nel log, tutorial e regole sempre accessibili (§12).
 
-## 12. Costanti e contenuti
+## 12. Insegnare il gioco
+
+Un autobattler ha un problema di onboarding tutto suo: il giocatore non muove
+niente durante il fight, quindi se non ha capito *prima* cosa conta, guarda numeri
+che non sa leggere. La spiegazione è quindi divisa in due livelli, con due pubblici
+diversi.
+
+- **Tutorial** (`src/ui/components/Tutorial.tsx`): 10 schermate, parte da solo alla
+  primissima apertura (`MetaProfile.tutorialSeen`) e si può rigiocare dalla home.
+  Regole di scrittura che mi sono dato: **una sola idea per schermata**, frasi
+  brevissime, parole concrete ("fa più male", non "moltiplicatore di danno"), zero
+  termini tecnici (niente *ruolo*, *passiva*, *tier*). Le illustrazioni sono gli
+  **sprite veri** del gioco, così quel che impari lo riconosci giocando. Il
+  triangolo dei tipi è insegnato come "sasso-carta-forbici" — e un test verifica che
+  il triangolo raccontato sia davvero quello della `TYPE_CHART`, perché una regola
+  spiegata male è peggio di una non spiegata.
+- **Regole complete** (`src/ui/components/RulesSheet.tsx`): due schede, sempre
+  raggiungibili dal `?` nell'header e dal `?` in battaglia. La scheda *Semplice*
+  è generata da `TUTORIAL_STEPS`: **una sola fonte di verità**, così tutorial e
+  regole non possono divergere. La scheda *Tutte le regole* entra nel dettaglio di
+  nodi, squadra, deposito, crescita, stati e ruoli.
+
+I test in `src/ui/components/tutorial.test.ts` bloccano gli errori che rendono il
+tutorial inutile: una creatura citata che non esiste, o che non ha uno sprite
+dedicato e resterebbe un riquadro vuoto davanti a un bambino.
+
+## 13. Costanti e contenuti
 
 Tutte le costanti di bilanciamento stanno in `src/content/balance.ts`. I contenuti
 (creature, oggetti, stati, tabella dei tipi, kit di ruolo, mappa) sono **dati** in
 `src/content/`: aggiungere una linea evolutiva costa un descrittore.
 
-## 13. Fuori scope (per ora)
+## 14. Fuori scope (per ora)
 
 Battle Tower come modalità separata, sfide giornaliere, account/cloud save, audio,
 acquisti reali. La fusione di creature resta un'idea aperta: con le linee evolutive

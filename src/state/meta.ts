@@ -2,7 +2,7 @@
 
 import type { MetaProfile } from './types';
 
-export const PROFILE_VERSION = 4;
+export const PROFILE_VERSION = 5;
 
 export function createMetaProfile(): MetaProfile {
   return {
@@ -10,6 +10,7 @@ export function createMetaProfile(): MetaProfile {
     essence: 0,
     lineBuffs: {},
     nuzlocke: false,
+    tutorialSeen: false,
     records: { runs: 0, bestBadges: 0, championWins: 0 },
     seen: [],
     run: null,

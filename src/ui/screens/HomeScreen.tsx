@@ -8,6 +8,7 @@ export function HomeScreen() {
   const navigate = useGame((s) => s.navigate);
   const toggleNuzlocke = useGame((s) => s.toggleNuzlocke);
   const hardReset = useGame((s) => s.hardReset);
+  const replayTutorial = useGame((s) => s.replayTutorial);
 
   const runActive = profile.run?.active ?? false;
 
@@ -40,6 +41,9 @@ export function HomeScreen() {
         )}
         <button className="btn-ghost" onClick={() => navigate('meta')}>
           Potenziamenti permanenti ✦
+        </button>
+        <button className="btn-ghost" onClick={replayTutorial}>
+          Come si gioca 📖
         </button>
         <button
           className={`border-2 border-black/50 px-3 py-2 text-sm ${

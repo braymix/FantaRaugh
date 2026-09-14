@@ -8,7 +8,8 @@ import { StarterScreen } from '@ui/screens/StarterScreen';
 import { MapScreen } from '@ui/screens/MapScreen';
 import { MetaScreen } from '@ui/screens/MetaScreen';
 import { BattleScreen } from '@ui/screens/BattleScreen';
-import { HelpSheet } from '@ui/components/HelpSheet';
+import { RulesSheet } from '@ui/components/RulesSheet';
+import { Tutorial } from '@ui/components/Tutorial';
 
 export default function App() {
   const screen = useGame((s) => s.screen);
@@ -16,6 +17,8 @@ export default function App() {
   const toast = useGame((s) => s.toast);
   const setToast = useGame((s) => s.setToast);
   const essence = useGame((s) => s.profile.essence);
+  const tutorialSeen = useGame((s) => s.profile.tutorialSeen);
+  const closeTutorial = useGame((s) => s.closeTutorial);
   const badges = useGame((s) => s.profile.run?.badges ?? 0);
 
   useEffect(() => {
@@ -57,7 +60,10 @@ export default function App() {
         {screen === 'battle' && <BattleScreen />}
       </main>
 
-      {help && <HelpSheet onClose={() => setHelp(false)} />}
+      {help && <RulesSheet onClose={() => setHelp(false)} />}
+
+      {/* Alla primissima apertura il tutorial parte da solo. */}
+      {!tutorialSeen && <Tutorial onClose={closeTutorial} />}
 
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">

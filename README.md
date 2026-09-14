@@ -17,7 +17,7 @@ fight. Web app (PWA), mobile-first, estetica **pixel-art**, offline-ready.
 ```bash
 npm install
 npm run dev        # sviluppo (Vite)
-npm test           # test unitari (Vitest) — 84 test, incluso il determinismo
+npm test           # test unitari (Vitest) — 97 test, incluso il determinismo
 npm run sim -- 25    # simula run complete e riporta medaglie/nodi per starter
 npm run build      # build di produzione + service worker PWA
 npm run preview    # anteprima della build
@@ -40,6 +40,8 @@ npm run typecheck  # controllo dei tipi
 - **Anti-stall**: i fight lunghi accelerano e poi si chiudono da soli.
 - **Meta**: essenze → potenziamenti permanenti per linea evolutiva; tratti di
   sinergia di tipo; **Nuzlocke** opzionale.
+- **Come si impara**: un tutorial di 10 schermate parte al primo avvio (parole da
+  bambino, una idea per schermata) e le regole complete stanno sempre dietro al `?`.
 
 ## Grafica
 
@@ -101,9 +103,9 @@ con il suo `Effect` in `src/content/items.ts`. Nessuna modifica all'engine.
 tipi, 43 creature su 19 linee evolutive, 14 oggetti con trade-off, mappa a 37 tappe
 con 8 palestre a tema + Quattro Supremi + Campione, reclutamenti/scambi/maestro di
 mosse, deposito da 1 posto, Nuzlocke, metaprogressione con potenziamenti di linea e
-tratti di tipo, sprite
-pixel procedurali, analizzatore di debolezze, legenda di gioco, salvataggio
-localStorage, **84 test**, simulatore di run complete, PWA offline.
+tratti di tipo, sprite pixel procedurali, analizzatore di debolezze, tutorial
+guidato + regole complete in due livelli, salvataggio localStorage con migrazione
+additiva, **97 test**, simulatore di run complete, PWA offline.
 
 **Non ancora**: Battle Tower come modalità separata, sfide giornaliere, account/cloud
 save, audio, acquisti reali.

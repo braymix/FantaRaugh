@@ -1,10 +1,18 @@
 /**
- * Legenda di gioco. Serve a rendere autoesplicative le meccaniche (barre, righe,
- * ruoli, stati, rarità) senza costringere il giocatore a indovinare.
+ * Regole del gioco, su due livelli:
+ *  - "Semplice": le stesse schermate del tutorial, in forma di elenco. Frasi
+ *    brevissime e parole concrete, pensate per essere capite da un bambino.
+ *  - "Tutte le regole": il riferimento completo, con i numeri.
+ *
+ * Il livello semplice riusa i DATI del tutorial (TUTORIAL_STEPS): così le due
+ * cose non possono raccontare versioni diverse del gioco.
  */
 
-import { ROLE_META, statusIcon } from '../format';
+import { useState } from 'react';
 import type { Role } from '@engine/types';
+import { ROLE_META, statusIcon } from '../format';
+import { Sprite } from './Sprite';
+import { TUTORIAL_STEPS } from './Tutorial';
 
 const ROLE_HINT: Record<Role, string> = {
   healer: 'Cura il più ferito; la cura in eccesso diventa scudo.',
@@ -28,20 +36,74 @@ const STATUSES: [string, string][] = [
   ['ambush', 'Agguato: forte bonus ai critici.'],
 ];
 
-export function HelpSheet({ onClose }: { onClose: () => void }) {
+export function RulesSheet({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<'semplice' | 'complete'>('semplice');
+
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/75" onClick={onClose}>
       <div
-        className="max-h-[88%] w-full overflow-y-auto border-t-2 border-gold/50 bg-night-800 p-4"
+        className="max-h-[90%] w-full overflow-y-auto border-t-2 border-gold/50 bg-night-800 p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <span className="font-display text-lg text-gold">Come si gioca</span>
+          <span className="font-display text-lg text-gold">Regole del gioco</span>
           <button className="btn-ghost" onClick={onClose}>
             Chiudi
           </button>
         </div>
 
+        <div className="mb-4 flex border-2 border-black/50">
+          {(['semplice', 'complete'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 px-2 py-2 text-xs ${tab === t ? 'bg-arcane text-white' : 'bg-white/5 text-white/50'}`}
+            >
+              {t === 'semplice' ? 'Semplice' : 'Tutte le regole'}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'semplice' ? <SimpleRules /> : <FullRules />}
+      </div>
+    </div>
+  );
+}
+
+/** Le schermate del tutorial, in elenco: si rilegge quando serve. */
+function SimpleRules() {
+  return (
+    <div className="space-y-3">
+      {TUTORIAL_STEPS.map((step) => (
+        <div key={step.title} className="border-2 border-black/40 bg-black/30 p-3">
+          <div className="mb-1 flex items-center gap-2">
+            {step.sprites ? (
+              <span className="flex items-end gap-1">
+                {step.sprites.map((id) => (
+                  <Sprite key={id} defId={id} scale={1} />
+                ))}
+              </span>
+            ) : (
+              <span className="text-2xl">{step.icon}</span>
+            )}
+            <span className="font-display text-base text-gold">{step.title}</span>
+          </div>
+          {step.lines.map((l, k) => (
+            <p key={k} className="text-sm leading-snug text-parchment">
+              {l}
+            </p>
+          ))}
+          {step.tip && <p className="mt-1 text-sm text-gold">💡 {step.tip}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Riferimento completo, con i dettagli e i numeri. */
+function FullRules() {
+  return (
+    <>
         <Section title="Il combattimento è automatico">
           <p>
             Non si scelgono le mosse: si costruisce la squadra. L'esito dipende da creature, tipi,
@@ -138,8 +200,7 @@ export function HelpSheet({ onClose }: { onClose: () => void }) {
             batti il boss: poi l'Ascensione sale e i dungeon diventano più duri.
           </p>
         </Section>
-      </div>
-    </div>
+    </>
   );
 }
 

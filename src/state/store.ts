@@ -51,6 +51,8 @@ interface GameState {
   navigate: (s: Screen) => void;
   setToast: (m: string | null) => void;
   toggleNuzlocke: () => void;
+  closeTutorial: () => void;
+  replayTutorial: () => void;
 
   // Run
   startRun: (starterId: string, seed?: number) => void;
@@ -130,6 +132,20 @@ export const useGame = create<GameState>((set, get) => ({
     const profile = cloneProfile(get().profile);
     profile.nuzlocke = !profile.nuzlocke;
     set({ profile, toast: profile.nuzlocke ? 'Nuzlocke attivo: chi cade è perso.' : 'Nuzlocke disattivato.' });
+    get().persist();
+  },
+
+  closeTutorial: () => {
+    const profile = cloneProfile(get().profile);
+    profile.tutorialSeen = true;
+    set({ profile });
+    get().persist();
+  },
+
+  replayTutorial: () => {
+    const profile = cloneProfile(get().profile);
+    profile.tutorialSeen = false;
+    set({ profile });
     get().persist();
   },
 

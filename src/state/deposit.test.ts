@@ -118,3 +118,18 @@ describe('deposito (1 posto)', () => {
     expect(run().team.find((m) => m.uid === stored)).toBeUndefined();
   });
 });
+
+describe('tutorial e salvataggi', () => {
+  it('la prima volta il tutorial non è ancora stato visto', () => {
+    useGame.getState().hardReset();
+    expect(useGame.getState().profile.tutorialSeen).toBe(false);
+  });
+
+  it('chiuderlo lo segna come visto; si può rivedere', () => {
+    useGame.getState().hardReset();
+    useGame.getState().closeTutorial();
+    expect(useGame.getState().profile.tutorialSeen).toBe(true);
+    useGame.getState().replayTutorial();
+    expect(useGame.getState().profile.tutorialSeen).toBe(false);
+  });
+});

@@ -10,7 +10,7 @@ import { BALANCE } from '@content/balance';
 import { CREATURE_MAP } from '@content/creatures';
 import { useGame } from '@state/store';
 import { BattleUnit } from '../components/BattleUnit';
-import { HelpSheet } from '../components/HelpSheet';
+import { RulesSheet } from '../components/RulesSheet';
 import { Sprite } from '../components/Sprite';
 import { useReplay, type Speed } from '../battle/useReplay';
 import type { DisplayUnit } from '../battle/replay';
@@ -184,7 +184,7 @@ export function BattleScreen() {
         </div>
       )}
 
-      {help && <HelpSheet onClose={() => setHelp(false)} />}
+      {help && <RulesSheet onClose={() => setHelp(false)} />}
 
       {/* Esito */}
       {display.done && (

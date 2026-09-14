@@ -61,6 +61,8 @@ export interface MetaProfile {
   lineBuffs: LineBuffs;
   /** Preferenza: la prossima run parte in Nuzlocke. */
   nuzlocke: boolean;
+  /** Il tutorial guidato è già stato visto (si può rivedere dalla base). */
+  tutorialSeen: boolean;
   records: {
     runs: number;
     bestBadges: number;

@@ -14,12 +14,16 @@ export function loadProfile(storage: StorageAdapter): MetaProfile {
   if (!raw) return createMetaProfile();
   try {
     const parsed = JSON.parse(raw) as MetaProfile;
-    if (!parsed || typeof parsed !== 'object' || parsed.version !== PROFILE_VERSION) {
-      // Schema precedente: si ricomincia dal meta pulito (i dati vecchi non sono
-      // traducibili, la struttura del gioco è cambiata).
-      return createMetaProfile();
+    if (!parsed || typeof parsed !== 'object') return createMetaProfile();
+    // Migrazione additiva: le versioni recenti hanno solo AGGIUNTO campi, quindi
+    // riempiamo i buchi con i valori di default invece di cancellare i progressi.
+    // Vale anche per la versione corrente: un salvataggio troncato a metà
+    // scrittura viene completato coi default, non fa schermata bianca.
+    if (parsed.version >= 4) {
+      return { ...createMetaProfile(), ...parsed, version: PROFILE_VERSION };
     }
-    return parsed;
+    // Più vecchio di così lo schema è incompatibile: si ricomincia pulito.
+    return createMetaProfile();
   } catch {
     return createMetaProfile();
   }

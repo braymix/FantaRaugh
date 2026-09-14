@@ -15,13 +15,21 @@ Fantasy puro.
 ```bash
 npm install
 npm run dev        # sviluppo (Vite)
-npm test           # test unitari (Vitest) — 53 test, incluso il determinismo
+npm test           # test unitari (Vitest) — 57 test, incluso il determinismo
 npm run sim -- 1000  # simulazione di bilanciamento su 1000 battaglie
 npm run build      # build di produzione + service worker PWA
 npm run preview    # anteprima della build
 npm run lint       # ESLint
 npm run typecheck  # controllo dei tipi
 ```
+
+## Grafica
+
+Estetica pixel-art: font `Pixelify Sans`, bordi netti e ombre "a scalino". Gli sprite
+di eroi e nemici sono **generati proceduralmente** da descrittori in
+`src/ui/art/sprites.ts` (palette + archetipo + copricapo + arma) e resi come PNG
+data-URL con `image-rendering: pixelated`. Per iterare sull'arte c'è una galleria di
+sviluppo: `npm run dev` e apri `/sprites.html`.
 
 ## Architettura
 
@@ -72,7 +80,9 @@ Nessuna modifica all'engine.
 
 **C'è**: engine ATB completo, sistema di effetti + 6 ruoli, 6 eroi / 6 armi / 12 perk
 / 8 nemici, dungeon a 5 layer con boss, schermate squadra / dungeon / battaglia,
-salvataggio localStorage, 53 test, simulatore di bilanciamento, PWA offline.
+sprite pixel procedurali, schede effetto con anteprima delle statistiche, legenda di
+gioco, loop roguelite, salvataggio localStorage, 57 test, simulatore di bilanciamento,
+PWA offline.
 
 **Non ancora** (interfacce/hook predisposti): casse giornaliere, energia monetizzata,
 acquisti, fusione (vedi opzioni in `DESIGN.md`), audio, animazioni elaborate, backend.

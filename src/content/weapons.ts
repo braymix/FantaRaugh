@@ -68,7 +68,7 @@ export const WEAPONS: WeaponDef[] = [
     affinityRoles: ['defender'],
     intrinsic: {
       id: 'wpn_bulwark_intrinsic',
-      name: 'Rappresaglia',
+      name: 'Contraccolpo',
       trigger: 'onDamaged',
       targeting: 'triggerSource',
       chance: 0.5,

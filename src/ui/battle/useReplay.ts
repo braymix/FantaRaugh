@@ -20,7 +20,6 @@ const VISUAL = new Set<BattleEvent['t']>([
   'heal',
   'shield',
   'statusTick',
-  'statusApplied',
   'stealBuff',
   'cleanse',
   'death',

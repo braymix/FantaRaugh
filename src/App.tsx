@@ -1,11 +1,12 @@
 /** Shell dell'app: header, navigazione tra schermate, toast. */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useGame } from '@state/store';
 import { HomeScreen } from '@ui/screens/HomeScreen';
 import { TeamScreen } from '@ui/screens/TeamScreen';
 import { DungeonScreen } from '@ui/screens/DungeonScreen';
 import { BattleScreen } from '@ui/screens/BattleScreen';
+import { HelpSheet } from '@ui/components/HelpSheet';
 
 export default function App() {
   const screen = useGame((s) => s.screen);
@@ -21,18 +22,26 @@ export default function App() {
     return () => clearTimeout(id);
   }, [toast, setToast]);
 
+  const [help, setHelp] = useState(false);
   const showHeader = screen !== 'battle';
 
   return (
-    <div className="mx-auto flex h-full max-w-md flex-col bg-night-900">
+    <div className="mx-auto flex h-full max-w-md flex-col bg-dither">
       {showHeader && (
         <header className="flex items-center justify-between border-b border-white/10 bg-night-800 px-3 py-2">
           <button className="font-display text-lg text-gold" onClick={() => navigate('home')}>
             Fantaraugh
           </button>
-          <div className="flex items-center gap-3 text-xs text-white/60">
+          <div className="flex items-center gap-2 text-xs text-white/60">
             <span title="Energia">⚡ {energy.current}/{energy.max}</span>
             <span title="Oro">🪙 {gold}</span>
+            <button
+              onClick={() => setHelp(true)}
+              title="Come si gioca"
+              className="border-2 border-black/50 bg-white/10 px-1.5 text-parchment"
+            >
+              ?
+            </button>
           </div>
         </header>
       )}
@@ -43,6 +52,8 @@ export default function App() {
         {screen === 'dungeon' && <DungeonScreen />}
         {screen === 'battle' && <BattleScreen />}
       </main>
+
+      {help && <HelpSheet onClose={() => setHelp(false)} />}
 
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">

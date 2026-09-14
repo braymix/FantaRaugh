@@ -1,10 +1,19 @@
-/** Schermata di combattimento: riproduce il log di eventi. Non calcola nulla. */
+/**
+ * Schermata di combattimento: riproduce il log di eventi. Non calcola nulla.
+ *
+ * Chiarezza: un banner annuncia l'abilità in corso, e toccando un combattente si
+ * apre la sua scheda (statistiche e stati attivi spiegati).
+ */
 
+import { useState } from 'react';
 import { BALANCE } from '@content/balance';
 import { useGame } from '@state/store';
 import { BattleUnit } from '../components/BattleUnit';
+import { HelpSheet } from '../components/HelpSheet';
+import { Sprite } from '../components/Sprite';
 import { useReplay, type Speed } from '../battle/useReplay';
 import type { DisplayUnit } from '../battle/replay';
+import { ROLE_META, statusIcon } from '../format';
 
 const SPEEDS: Speed[] = [1, 2, 4];
 
@@ -14,6 +23,9 @@ export function BattleScreen() {
   const run = useGame((s) => s.profile.run);
   const navigate = useGame((s) => s.navigate);
   const newDungeon = useGame((s) => s.newDungeon);
+
+  const [inspect, setInspect] = useState<DisplayUnit | null>(null);
+  const [help, setHelp] = useState(false);
 
   const events = battle?.events ?? [];
   const replay = useReplay(events, BALANCE.actionThreshold);
@@ -38,40 +50,65 @@ export function BattleScreen() {
   const floatsFor = (u: DisplayUnit) => display.floats.filter((f) => f.uid === u.uid);
   const runActive = run?.active ?? false;
   const won = display.winner === 'player';
+  const ability = display.lastAbility;
+  const actorName = ability ? (display.units[ability.uid]?.name ?? '') : '';
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-dither">
+      {/* Barra di stato */}
+      <div className="flex items-center justify-between border-b-2 border-black/50 bg-night-800 px-2 py-1 text-[10px] text-white/50">
+        <span>{display.turn > 0 ? `Turno ${display.turn}` : 'Preparativi'}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-white/30">seed {battle.seed}</span>
+          <button onClick={() => setHelp(true)} className="border-2 border-black/50 bg-white/10 px-1.5 text-parchment">
+            ?
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col overflow-y-auto">
       {/* Nemici */}
-      <div className="p-2">
-        <div className="mb-1 text-[10px] uppercase tracking-wider text-red-300/70">Nemici</div>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+      <div className="px-2 pt-2">
+        <div className="mb-1 text-[9px] uppercase tracking-widest text-red-300/70">Nemici</div>
+        <div className="grid grid-cols-2 gap-1.5">
           {enemies.map((u) => (
-            <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} />
+            <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
           ))}
         </div>
       </div>
 
-      {/* Log al centro */}
-      <div className="mx-2 flex-1 overflow-hidden rounded-lg border border-white/5 bg-black/30 p-2">
-        <div className="flex h-full flex-col justify-end gap-0.5 overflow-y-auto text-[11px] text-white/70">
+      {/* Squadra */}
+      <div className="px-2 pb-1">
+        <div className="mb-1 text-[9px] uppercase tracking-widest text-emerald-300/70">La tua squadra</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {players.map((u) => (
+            <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
+          ))}
+        </div>
+      </div>
+      {/* Banner abilità + log (in basso: assorbe lo spazio residuo) */}
+      <div className="mx-2 mb-2 flex min-h-0 flex-1 flex-col border-2 border-black/40 bg-black/35">
+        {ability && (
+          <div
+            key={ability.id}
+            className={`shrink-0 border-b-2 border-black/40 px-2 py-1 text-center text-[11px] ${
+              ability.isUltimate ? 'bg-gold/20 text-gold' : 'bg-white/5 text-parchment'
+            }`}
+          >
+            <b>{actorName}</b> usa <b>{ability.name}</b>
+            {ability.isUltimate && ' ✦'}
+          </div>
+        )}
+        <div className="flex min-h-0 flex-1 flex-col justify-end gap-0.5 overflow-y-auto p-2 text-[10px] leading-snug text-white/65">
           {display.logLines.slice(-8).map((l, i) => (
             <div key={i}>{l}</div>
           ))}
         </div>
       </div>
-
-      {/* Giocatore */}
-      <div className="p-2">
-        <div className="mb-1 text-[10px] uppercase tracking-wider text-emerald-300/70">La tua squadra</div>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-          {players.map((u) => (
-            <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} />
-          ))}
-        </div>
       </div>
 
       {/* Controlli */}
-      <div className="flex items-center gap-2 border-t border-white/10 bg-night-800 p-2">
+      <div className="flex items-center gap-2 border-t-2 border-black/50 bg-night-800 p-2">
         <button className="btn-ghost" onClick={replay.togglePlay} disabled={display.done}>
           {replay.playing ? '⏸' : '▶'}
         </button>
@@ -80,9 +117,11 @@ export function BattleScreen() {
             <button
               key={s}
               onClick={() => replay.setSpeed(s)}
-              className={`rounded px-2 py-1 text-xs ${replay.speed === s ? 'bg-arcane text-white' : 'bg-white/10 text-white/60'}`}
+              className={`border-2 border-black/50 px-2 py-1 text-xs ${
+                replay.speed === s ? 'bg-arcane text-white' : 'bg-white/10 text-white/60'
+              }`}
             >
-              x{s}
+              ×{s}
             </button>
           ))}
         </div>
@@ -90,22 +129,69 @@ export function BattleScreen() {
           Salta ⏭
         </button>
       </div>
-
-      {/* Barra di avanzamento */}
       <div className="h-1 w-full bg-black/40">
         <div className="h-full bg-arcane transition-all" style={{ width: `${replay.progress * 100}%` }} />
       </div>
 
+      {/* Scheda di un combattente */}
+      {inspect && (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/70" onClick={() => setInspect(null)}>
+          <div
+            className="w-full border-t-2 border-gold/50 bg-night-800 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <Sprite defId={inspect.defId} role={inspect.role} scale={3} />
+              <div className="min-w-0 flex-1">
+                <div className="font-display text-base">{inspect.name}</div>
+                <div className={`text-[11px] ${ROLE_META[inspect.role].color}`}>
+                  {ROLE_META[inspect.role].icon} {ROLE_META[inspect.role].label} ·{' '}
+                  {inspect.row === 'front' ? 'prima linea' : 'retrovia'}
+                </div>
+                <div className="text-[11px] text-white/55">
+                  {inspect.hp}/{inspect.maxHp} HP
+                  {inspect.shield > 0 && <span className="text-sky-300"> · ◈{inspect.shield} scudo</span>}
+                  {' · '}⚡ {inspect.energy}/{inspect.energyMax}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 text-[10px] uppercase tracking-wider text-white/40">Stati attivi</div>
+            {inspect.statuses.length === 0 ? (
+              <div className="text-[11px] text-white/35">Nessuno stato attivo.</div>
+            ) : (
+              <div className="mt-1 space-y-1">
+                {inspect.statuses.map((s) => (
+                  <div key={s.id} className="flex items-baseline gap-2 text-[11px]">
+                    <span className="w-4 text-center">{statusIcon(s.id)}</span>
+                    <span className={s.kind === 'buff' ? 'text-emerald-200' : 'text-red-200'}>
+                      {s.name}
+                      {s.stacks > 1 && ` ×${s.stacks}`}
+                    </span>
+                    <span className="ml-auto text-white/40">{s.duration} turni</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button className="btn-ghost mt-3 w-full" onClick={() => setInspect(null)}>
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {help && <HelpSheet onClose={() => setHelp(false)} />}
+
       {/* Esito */}
       {display.done && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-xl border border-white/10 bg-night-700 p-5 text-center">
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/75 p-4">
+          <div className="card w-full max-w-sm text-center">
             <div className="mb-2 font-display text-2xl">
               {won ? '🏆 Vittoria' : display.winner === 'enemy' ? '💀 Sconfitta' : '⏳ Pareggio'}
             </div>
             {reward && (reward.xp > 0 || reward.gold > 0 || reward.gems > 0) && (
               <div className="mb-3 space-y-0.5 text-sm text-white/70">
-                {!won && <div className="text-white/50">La squadra impara dalla sconfitta:</div>}
+                {!won && <div className="text-white/45">La squadra impara dalla sconfitta:</div>}
                 {reward.xp > 0 && <div>+{reward.xp} XP alla squadra</div>}
                 {reward.gold > 0 && <div className="text-gold">+{reward.gold} oro</div>}
                 {reward.gems > 0 && <div className="text-fuchsia-300">+{reward.gems} gemme</div>}
@@ -113,7 +199,7 @@ export function BattleScreen() {
                 {reward.newPerk && <div className="text-violet-300">Nuovo perk: {reward.newPerk}</div>}
               </div>
             )}
-            <div className="mb-3 text-xs text-white/40">Durata: {battle.stats.turns} turni · seed {battle.seed}</div>
+            <div className="mb-3 text-xs text-white/40">Durata: {battle.stats.turns} turni</div>
             {won && runActive ? (
               <button className="btn-primary w-full" onClick={() => navigate('dungeon')}>
                 Continua il dungeon

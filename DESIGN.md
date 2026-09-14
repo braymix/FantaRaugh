@@ -142,11 +142,37 @@ Prossimi passi di tuning (col sim): rifinire il rapporto tra i DPS, tarare
 - **Look pixel-art "fine"**: font `Pixelify Sans` (pixel ma leggibile, non troppo
   grosso), `image-rendering: pixelated`, angoli quasi netti (borderRadius ridotto in
   `tailwind.config.js`), bordi 2px e ombra "a scalino" (`shadow-pixel`).
+- **Sprite procedurali** (`src/ui/art/`): una micro-libreria di primitive pixel
+  (`pixel.ts`) e archetipi di silhouette (`sprites.ts`: umanoide, bestia, volante,
+  aracnide, non-morto). Ogni unità dichiara solo palette + archetipo + copricapo +
+  arma; la griglia 24×24 viene convertita una volta in PNG data-URL (memoizzato).
+  Perché così: gli sprite restano *dati* versionabili, senza pipeline di asset, e
+  aggiungere un nemico costa quattro righe. Galleria di sviluppo: `vite` + `/sprites.html`.
+- **"Juice"**: scossa sul colpo, lampo sul critico, respiro d'attesa, alone su chi
+  agisce, fondo a dithering. Tutto disattivato con `prefers-reduced-motion`.
 - **Offline**: il font è cache-ato a runtime dal service worker (vedi
   `vite.config.ts`), così l'app resta coerente anche offline dopo la prima visita.
 - **Deploy (Render, Static Site)**: `render.yaml` incluso. Nessun backend/DB: lo stato
   è in `localStorage` (persiste nel browser dell'utente). Su un Static Site non c'è
   disco effimero né servizio che si riavvia, quindi il salvataggio non "sparisce".
+
+## 9c. Leggibilità di abilità e potenziamenti
+
+Problema riscontrato giocando: non si capiva cosa facessero abilità, perk e armi.
+Interventi (tutti derivati dai dati, nessun testo scritto a mano):
+
+- `describeEffectParts()` in `engine/descriptions.ts` affianca la frase unica con una
+  **scomposizione strutturata**: quando scatta → su chi → cosa fa → condizioni → chip
+  (costo energia, probabilità, ricarica, limiti) → tag.
+- `ui/components/EffectCard.tsx` la rende come scheda, usata per abilità, ultimate,
+  passive, perk e intrinseci d'arma. Ogni passiva porta un badge di **provenienza**
+  (innata / arma / perk).
+- I selettori di arma e perk sono schede con **anteprima del delta di statistiche**
+  prima di confermare (`StatDelta`), non più menu a tendina con soli nomi.
+- In battaglia: banner dell'abilità in corso, stati con **nome** (non solo icona) e
+  scheda di ispezione toccando un combattente.
+- `ui/components/HelpSheet.tsx`: legenda sempre accessibile (barre, righe, ruoli,
+  stati, come leggere una scheda effetto).
 
 ## 9. Costanti
 

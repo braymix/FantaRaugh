@@ -8,7 +8,7 @@
  * cui il testo generato risulterebbe goffo).
  */
 
-import type { Action, Condition, Effect, Registry, TargetRule, Trigger } from './types';
+import type { Action, Condition, Effect, Registry, Tag, TargetRule, Trigger } from './types';
 
 const TRIGGER_TEXT: Record<Trigger, string> = {
   active: '',
@@ -163,4 +163,142 @@ function capitalize(s: string): string {
 
 function lower(s: string): string {
   return s.length > 0 ? s[0]!.toLowerCase() + s.slice(1) : s;
+}
+
+// ---------------------------------------------------------------------------
+// API strutturata: invece di una frase lunga, pezzi scansionabili per la UI.
+// Stesso principio (derivata dai dati), ma leggibile a colpo d'occhio.
+// ---------------------------------------------------------------------------
+
+export const TAG_LABEL: Record<Tag, string> = {
+  fire: 'fuoco',
+  bleed: 'sanguinamento',
+  poison: 'veleno',
+  control: 'controllo',
+  area: 'area',
+  holy: 'sacro',
+  shadow: 'ombra',
+  physical: 'fisico',
+  magical: 'magico',
+  buff: 'buff',
+  debuff: 'debuff',
+};
+
+export interface EffectAction {
+  icon: string;
+  text: string;
+}
+
+export interface EffectBreakdown {
+  /** Quando scatta ("Quando colpisci"); per le attive: "Azione del turno". */
+  triggerLabel: string;
+  /** Su chi agisce ("un nemico", "tutti gli alleati"). */
+  targetLabel: string;
+  /** Cosa fa, una voce per azione, senza ripetere il bersaglio. */
+  actions: EffectAction[];
+  /** Vincoli ("i tuoi HP sono sotto il 30%"). */
+  conditions: string[];
+  /** Etichette brevi: probabilità, ricarica, limiti, costo energia. */
+  chips: string[];
+  tags: Tag[];
+}
+
+/** Icona sintetica per tipo di azione. */
+function actionIcon(action: Action): string {
+  switch (action.kind) {
+    case 'damage':
+      return action.damageType === 'physical' ? '⚔' : '✦';
+    case 'heal':
+      return '✚';
+    case 'shield':
+      return '🛡';
+    case 'applyStatus':
+      return '✨';
+    case 'cleanse':
+      return '🧼';
+    case 'removeStatus':
+      return '✖';
+    case 'pushGauge':
+      return '⏩';
+    case 'gainEnergy':
+      return '⚡';
+    case 'addStack':
+      return '▲';
+    case 'consumeStack':
+      return '▼';
+    case 'stealBuff':
+      return '🫳';
+    default:
+      return '•';
+  }
+}
+
+/**
+ * Descrive COSA fa un'azione, senza nominare il bersaglio (mostrato a parte).
+ * Frasi corte e numeriche: si leggono a colpo d'occhio.
+ */
+function describeActionShort(action: Action, registry?: Registry): string {
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+  switch (action.kind) {
+    case 'damage': {
+      const type = action.damageType === 'physical' ? 'fisico' : 'magico';
+      const hits = action.hits && action.hits > 1 ? ` ×${action.hits} colpi` : '';
+      const total =
+        action.hits && action.hits > 1 ? ` (tot. ${pct(action.power * action.hits)})` : '';
+      const pierce =
+        action.defIgnorePct && action.defIgnorePct > 0
+          ? `, ignora ${pct(action.defIgnorePct)} difesa`
+          : '';
+      const bonus = action.bonusVsTag
+        ? `, +${pct(action.bonusVsTag.pct)} se ${TAG_LABEL[action.bonusVsTag.tag]}`
+        : '';
+      return `Danno ${type} ${pct(action.power)} ATK${hits}${total}${pierce}${bonus}`;
+    }
+    case 'heal':
+      return `Cura ${pct(action.power)} ATK${action.overhealToShield ? ' — eccesso → scudo' : ''}`;
+    case 'shield':
+      return `Scudo ${pct(action.power)} ATK`;
+    case 'applyStatus': {
+      const stacks = action.stacks && action.stacks > 1 ? ` ×${action.stacks}` : '';
+      const who = action.onSelf ? ' su di sé' : '';
+      return `Applica ${statusName(action.statusId, registry)}${stacks}${who} · ${action.duration} turni`;
+    }
+    case 'cleanse':
+      return `Rimuove ${action.count ?? 'tutti i'} debuff`;
+    case 'removeStatus':
+      return `Consuma ${statusName(action.statusId, registry)}${action.onSelf ? ' su di sé' : ''}`;
+    case 'pushGauge':
+      return action.amount >= 0
+        ? `Anticipa il turno di ${pct(action.amount)}`
+        : `Ritarda il turno di ${pct(Math.abs(action.amount))}`;
+    case 'gainEnergy':
+      return `+${action.amount} energia`;
+    case 'addStack':
+      return `+${action.amount} ${action.stack} (max ${action.max})`;
+    case 'consumeStack':
+      return `Consuma gli stack di ${action.stack}`;
+    case 'stealBuff':
+      return `Ruba ${action.count ?? 1} buff`;
+    default:
+      return '';
+  }
+}
+
+export function describeEffectParts(effect: Effect, registry?: Registry): EffectBreakdown {
+  const chips: string[] = [];
+  if (effect.energyCost) chips.push(`⚡ ${effect.energyCost}`);
+  if (effect.chance !== undefined && effect.chance < 1) chips.push(`${Math.round(effect.chance * 100)}%`);
+  if (effect.cooldown) chips.push(`ricarica ${effect.cooldown}`);
+  if (effect.maxTriggersPerBattle) chips.push(`max ${effect.maxTriggersPerBattle}/battaglia`);
+
+  return {
+    triggerLabel: effect.trigger === 'active' ? 'Azione del turno' : TRIGGER_TEXT[effect.trigger],
+    targetLabel: TARGET_TEXT[effect.targeting],
+    actions: effect.actions
+      .map((a) => ({ icon: actionIcon(a), text: describeActionShort(a, registry) }))
+      .filter((a) => a.text.length > 0),
+    conditions: (effect.conditions ?? []).map((c) => describeCondition(c, registry)).filter(Boolean),
+    chips,
+    tags: effect.tags ?? [],
+  };
 }

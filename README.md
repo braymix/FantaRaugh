@@ -1,11 +1,14 @@
 # Fantaraugh
 
-RPG a squadre turn-based con **combattimenti automatici deterministici**, ruoli con
-meccaniche distintive, un sistema di effetti componibile e dungeon a grafo ramificato.
-Web app (PWA), mobile-first, offline-ready. Fantasy puro.
+RPG a squadre turn-based **roguelite** con **combattimenti automatici deterministici**,
+ruoli con meccaniche distintive, sistema di effetti componibile e dungeon a grafo
+ramificato. Web app (PWA), mobile-first, estetica **pixel-art**, offline-ready.
+Fantasy puro.
 
 > Vertical slice giocabile: schiera la squadra, equipaggia armi e perk, entra in un
-> dungeon generato da un seed e guarda i combattimenti riprodursi dal log di eventi.
+> dungeon generato da un seed, guarda i combattimenti riprodursi dal log di eventi.
+> **Ritenti e cresci**: se cadi tieni l'XP e riparti più forte; battuto il boss sale
+> l'Ascensione e la sfida con lei.
 
 ## Avvio rapido
 
@@ -40,6 +43,24 @@ l'alto; riceve i dati che gli servono tramite un `Registry` iniettato.
   l'animazione e vedere subito il risultato.
 
 Dettagli e decisioni di design: vedi [`DESIGN.md`](./DESIGN.md).
+
+## Deploy su Render (Static Site)
+
+Il repo include [`render.yaml`](./render.yaml). Su Render: **New +** → **Blueprint** →
+seleziona il repo → Render legge `render.yaml` e crea uno Static Site
+(`npm ci && npm run build`, pubblica `./dist`).
+
+In alternativa, a mano: **New +** → **Static Site** →
+- Build Command: `npm ci && npm run build`
+- Publish Directory: `dist`
+- Aggiungi una rewrite rule `/*` → `/index.html`.
+
+**Persistenza / "il DB non persiste":** questa demo **non ha backend né database**.
+Lo stato del giocatore è salvato in `localStorage` (client-side, `src/state/storage.ts`)
+e persiste nel browser dell'utente. Su uno Static Site non c'è disco effimero né
+servizio che si riavvia: i salvataggi non spariscono. Un DB reale servirà solo quando
+si vorrà sincronizzare tra dispositivi/account — l'interfaccia `StorageAdapter` è già
+pronta per sostituire localStorage con un backend senza toccare il resto.
 
 ## Aggiungere contenuti
 

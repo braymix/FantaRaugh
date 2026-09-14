@@ -78,7 +78,17 @@ Effetti come `pushGauge` (anticipo/ritardo) sono una leva prevista fin da subito
    scelta del percorso.
 3. **Fusione**: fuori scope per questa sessione (solo tipi/hook). Vedi §7.
 
-## 6. Meta-gioco (solo tipi/hook in questa fase)
+## 6. Meta-gioco & loop roguelite
+
+**Loop "ritenti e cresci"** (roguelite): la squadra parte a livello basso (3). In una
+run si ripuliscono i nodi guadagnando XP *permanente*; se si cade, si riceve una
+**consolazione** proporzionale ai nodi ripuliti (XP + oro), così ogni tentativo
+lascia crescita. Si ritenta finché non si batte il boss; battuto il boss, l'
+**Ascensione** sale e i dungeon successivi scalano di livello — sempre una prossima
+sfida. Implementazione: `state/store.ts` (`enterNode`/`newDungeon`), `state/run.ts`
+(`grantDefeatConsolation`), `profile.ascension`/`bossKills`/`runsAttempted`.
+
+Altri sistemi (solo tipi/hook in questa fase):
 
 - `StorageAdapter` (localStorage/memory) dietro cui sta il salvataggio versionato.
 - Valute (soft `gold`, premium `gems`) — **nessun acquisto reale**.
@@ -110,20 +120,33 @@ facile da bilanciare). Da confermare.
 ## 8. Bilanciamento — stato e risultati del simulatore
 
 `npm run sim` esegue 1000 battaglie della squadra di partenza e riporta win rate,
-durata media e danno per ruolo. Findings attuali (da iterare):
+durata media e danno per ruolo. Dopo la ritaratura per il roguelite:
 
-- **Win rate ~100%** a livello di partenza contro incontri di pari/poco superiore
-  livello: gli eroi sono nettamente più forti dei nemici "trash". Il divario si
-  riduce solo a differenze di livello estreme (≈88% a nemici +32 livelli). → I nemici
-  vanno riscalati (growth più ripida) e/o va introdotta pressione (numero, modificatori
-  di stanza).
-- **Nascosto sovra-tunato**: da solo produce ~6× il danno degli altri DPS anche
-  dopo un primo ritocco (ambush e ultimate ridotti). È voluto che sia burst, ma il
-  divario è eccessivo. → Prossimi passi: ridurre ulteriormente ambush/ultimate o
-  aumentare la sopravvivenza dei bersagli in retrovia; usare il sim per convergere.
+- I nemici hanno un **moltiplicatore di potenza globale** (`balance.enemyPowerScale`,
+  attualmente 2.6) che li rende competitivi a pari livello. Unico knob per alzare/
+  abbassare la durezza dell'intero gioco.
+- **Curva di sfida** (squadra iniziale, ascensione 0): primo scontro ~100%; nella run
+  greedy si ripuliscono ~4/5 nodi ma il **boss è un muro** (0% a Lv3 → ~10% Lv6 →
+  ~32% Lv10 → ~52% Lv15 → ~75% Lv20). Esattamente il "ritenti e cresci": progresso
+  costante ogni run, boss superato dopo qualche livello.
+- **Sim generico** (incontri misti, ~1000 battaglie): win rate ~82%, durata media
+  ~50 turni. Il **Nascosto** resta il miglior DPS (~2.8× rispetto al Caster, sceso da
+  ~6×): burst voluto, divario ora accettabile.
 - Curatore/Difensore contribuiscono via cura/mitigazione, non danno (atteso).
 
-Il simulatore è lo strumento con cui si itererà questo bilanciamento.
+Prossimi passi di tuning (col sim): rifinire il rapporto tra i DPS, tarare
+`ascensionLevelStep` sulla curva XP, aggiungere modificatori di stanza per varietà.
+
+## 9b. Estetica pixel & deploy
+
+- **Look pixel-art "fine"**: font `Pixelify Sans` (pixel ma leggibile, non troppo
+  grosso), `image-rendering: pixelated`, angoli quasi netti (borderRadius ridotto in
+  `tailwind.config.js`), bordi 2px e ombra "a scalino" (`shadow-pixel`).
+- **Offline**: il font è cache-ato a runtime dal service worker (vedi
+  `vite.config.ts`), così l'app resta coerente anche offline dopo la prima visita.
+- **Deploy (Render, Static Site)**: `render.yaml` incluso. Nessun backend/DB: lo stato
+  è in `localStorage` (persiste nel browser dell'utente). Su un Static Site non c'è
+  disco effimero né servizio che si riavvia, quindi il salvataggio non "sparisce".
 
 ## 9. Costanti
 

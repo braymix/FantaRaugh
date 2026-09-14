@@ -1,18 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer components {
+  /* Pulsanti/box "retro": bordo netto e ombra a scalino, nessun angolo morbido. */
   .btn-primary {
-    @apply rounded-lg bg-arcane px-4 py-2.5 font-semibold text-white shadow transition hover:bg-violet-600 active:scale-95 disabled:opacity-40;
+    @apply border-2 border-black/60 bg-arcane px-4 py-2.5 font-semibold text-white shadow-pixel transition hover:bg-violet-600 active:translate-x-px active:translate-y-px active:shadow-none disabled:opacity-40;
   }
   .btn-ghost {
-    @apply rounded-lg bg-white/10 px-3 py-2 text-sm text-parchment transition hover:bg-white/20 active:scale-95 disabled:opacity-30;
+    @apply border-2 border-black/50 bg-white/10 px-3 py-2 text-sm text-parchment shadow-pixel transition hover:bg-white/20 active:translate-x-px active:translate-y-px active:shadow-none disabled:opacity-30;
   }
   .card {
-    @apply rounded-xl border border-white/10 bg-night-700/70 p-3;
+    @apply border-2 border-black/50 bg-night-700/80 p-3 shadow-pixel;
   }
 }
 
@@ -30,9 +31,19 @@ body {
   margin: 0;
   background: #120a1c;
   color: #e8dcc0;
-  font-family: 'Inter', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  font-family: 'Pixelify Sans', 'VT323', ui-monospace, monospace;
   overscroll-behavior: none;
+}
+
+/* Estetica pixel: niente antialias sui bordi, rendering "crisp" delle immagini. */
+* {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+img,
+canvas,
+svg {
+  image-rendering: pixelated;
 }
 
 @keyframes float-up {

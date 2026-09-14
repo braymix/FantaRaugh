@@ -7,7 +7,7 @@ import { BALANCE } from '@content/balance';
 import { WEAPON_MAP } from '@content/weapons';
 import type { OwnedHero, OwnedPerk, OwnedWeapon, PlayerProfile } from './types';
 
-export const PROFILE_VERSION = 1;
+export const PROFILE_VERSION = 2;
 
 function weapon(instanceId: string, defId: string, level: number, perks: (string | null)[]): OwnedWeapon {
   const slots = BALANCE.raritySlots[WEAPON_MAP[defId]!.rarity];
@@ -44,13 +44,14 @@ export function createDefaultProfile(now: number = Date.now()): PlayerProfile {
     weapon('wp_bow', 'wpn_longbow', 3, ['pk_venom']),
   ];
 
+  // Livello di partenza basso: c'è margine per crescere run dopo run (roguelite).
   const heroes: OwnedHero[] = [
-    hero('hero_thane', 8, 'wp_shield', 'front'),
-    hero('hero_kael', 8, 'wp_hammer', 'front'),
-    hero('hero_umbra', 8, 'wp_dagger', 'back'),
-    hero('hero_pyra', 8, 'wp_staff1', 'back'),
-    hero('hero_seraphine', 8, 'wp_staff2', 'back'),
-    hero('hero_vesper', 8, 'wp_bow', 'back'),
+    hero('hero_thane', 3, 'wp_shield', 'front'),
+    hero('hero_kael', 3, 'wp_hammer', 'front'),
+    hero('hero_umbra', 3, 'wp_dagger', 'back'),
+    hero('hero_pyra', 3, 'wp_staff1', 'back'),
+    hero('hero_seraphine', 3, 'wp_staff2', 'back'),
+    hero('hero_vesper', 3, 'wp_bow', 'back'),
   ];
 
   return {
@@ -62,5 +63,8 @@ export function createDefaultProfile(now: number = Date.now()): PlayerProfile {
     energy: { current: BALANCE.energyMax, max: BALANCE.energyMax, lastRefillAt: now },
     team: ['hero_thane', 'hero_kael', 'hero_umbra', 'hero_pyra', 'hero_seraphine'],
     run: null,
+    ascension: 0,
+    runsAttempted: 0,
+    bossKills: 0,
   };
 }

@@ -47,6 +47,20 @@ describe('mappa della run', () => {
     }
   });
 
+  it('la stanza centrale di un layer da 3 è sempre raggiungibile da ogni stanza precedente', () => {
+    for (const seed of [1, 7, 9, 31, 42, 123, 999]) {
+      const m = generateRunMap(seed);
+      for (let l = 0; l < m.layers.length - 1; l++) {
+        const nxt = m.layers[l + 1]!;
+        if (nxt.length !== 3) continue;
+        const middle = nxt[1]!;
+        for (const cid of m.layers[l]!) {
+          expect(m.nodes[cid]!.next).toContain(middle);
+        }
+      }
+    }
+  });
+
   it('il livello dei nemici cresce col progredire delle tratte', () => {
     const m = generateRunMap(5);
     const firstCommander = Object.values(m.nodes).find((n) => n.kind === 'commander' && n.segment === 0)!;

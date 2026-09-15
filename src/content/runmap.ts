@@ -279,6 +279,9 @@ function link(nodes: Record<string, MapNode>, cur: string[], nxt: string[], rng:
     const targets = new Set<number>([primary]);
     if (rng.chance(0.5) && primary + 1 < nxt.length) targets.add(primary + 1);
     if (rng.chance(0.4) && primary - 1 >= 0) targets.add(primary - 1);
+    // Con 3 stanze nel layer successivo, quella centrale deve restare sempre raggiungibile,
+    // qualunque via si scelga nel layer corrente.
+    if (nxt.length === 3) targets.add(1);
     node.next = [...targets].sort((a, b) => a - b).map((idx) => nxt[idx]!);
   }
   for (let j = 0; j < nxt.length; j++) {

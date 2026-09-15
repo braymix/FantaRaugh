@@ -37,6 +37,10 @@ export function BattleScreen() {
   const list = display.order.map((uid) => display.units[uid]!).filter(Boolean);
   const enemies = list.filter((u) => u.side === 'enemy');
   const players = list.filter((u) => u.side === 'player');
+  const enemiesFront = enemies.filter((u) => u.row === 'front');
+  const enemiesBack = enemies.filter((u) => u.row === 'back');
+  const playersFront = players.filter((u) => u.row === 'front');
+  const playersBack = players.filter((u) => u.row === 'back');
 
   if (!battle) {
     return (
@@ -68,24 +72,61 @@ export function BattleScreen() {
       </div>
 
       <div className="flex flex-1 flex-col overflow-y-auto">
-      {/* Nemici */}
-      <div className="px-2 pt-2">
-        <div className="mb-1 text-xs uppercase tracking-wider text-red-300 font-bold">Nemici</div>
-        <div className="grid grid-cols-2 gap-1.5">
-          {enemies.map((u) => (
-            <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
-          ))}
-        </div>
+      {/* Nemici: retrovia in alto, prima linea verso il centro campo */}
+      <div className="border-b-4 border-red-900/60 bg-red-950/20 px-2 pb-2 pt-2">
+        <div className="mb-1 text-xs uppercase tracking-wider text-red-300 font-bold">☠ Nemici</div>
+        {enemiesBack.length > 0 && (
+          <div className="mb-1">
+            <div className="mb-0.5 text-[9px] uppercase tracking-wider text-red-300/50 font-semibold">▯ Retrovia</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {enemiesBack.map((u) => (
+                <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
+              ))}
+            </div>
+          </div>
+        )}
+        {enemiesFront.length > 0 && (
+          <div>
+            <div className="mb-0.5 text-[9px] uppercase tracking-wider text-red-300/70 font-semibold">▮ Prima linea</div>
+            <div className="grid grid-cols-2 gap-1.5 border-l-2 border-red-500/40 pl-1.5">
+              {enemiesFront.map((u) => (
+                <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Squadra */}
-      <div className="px-2 pb-1">
-        <div className="mb-1 text-xs uppercase tracking-wider text-emerald-300 font-bold">La tua squadra</div>
-        <div className="grid grid-cols-2 gap-1.5">
-          {players.map((u) => (
-            <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
-          ))}
-        </div>
+      {/* Confine tra i due schieramenti */}
+      <div className="flex items-center gap-2 bg-night-800 px-2 py-1">
+        <div className="h-0.5 flex-1 bg-gradient-to-r from-red-500/60 to-black/0" />
+        <span className="shrink-0 text-[10px] font-display tracking-widest text-gold/80">VS</span>
+        <div className="h-0.5 flex-1 bg-gradient-to-l from-emerald-500/60 to-black/0" />
+      </div>
+
+      {/* Squadra: prima linea verso il centro campo, retrovia in basso */}
+      <div className="border-t-4 border-emerald-900/60 bg-emerald-950/10 px-2 pb-1 pt-2">
+        <div className="mb-1 text-xs uppercase tracking-wider text-emerald-300 font-bold">🛡 La tua squadra</div>
+        {playersFront.length > 0 && (
+          <div className="mb-1">
+            <div className="mb-0.5 text-[9px] uppercase tracking-wider text-emerald-300/70 font-semibold">▮ Prima linea</div>
+            <div className="grid grid-cols-2 gap-1.5 border-l-2 border-emerald-500/40 pl-1.5">
+              {playersFront.map((u) => (
+                <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
+              ))}
+            </div>
+          </div>
+        )}
+        {playersBack.length > 0 && (
+          <div>
+            <div className="mb-0.5 text-[9px] uppercase tracking-wider text-emerald-300/50 font-semibold">▯ Retrovia</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {playersBack.map((u) => (
+                <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       {/* Banner abilità + log (in basso: assorbe lo spazio residuo) */}
       <div className="mx-2 mb-2 flex max-h-52 min-h-0 flex-1 flex-col border-2 border-black/40 bg-black/35">

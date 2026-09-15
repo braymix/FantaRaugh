@@ -1,11 +1,11 @@
 /**
- * Mappa della run, in stile Pokelike: una lunga catena di nodi ramificata con
- * **8 palestre a tema di tipo** come checkpoint, poi i Quattro Supremi e il
- * Campione.
+ * Mappa del dungeon: una lunga catena di stanze ramificata con
+ * **7 comandanti a tema di tipo** come checkpoint di ascesa del dungeon, poi
+ * i 3 leader e il capo finale.
  *
- * Deterministica dal seed: stesso seed ⇒ stessa mappa, stessi incontri, stesse
- * offerte. Ogni scelta di percorso ha un costo-opportunità: un nodo oggetto è un
- * nodo allenatore in meno (e quindi meno livelli).
+ * Deterministica dal seed: stesso seed ⇒ stessa mappa, stesse stanze, stessi incontri.
+ * Ogni scelta di percorso ha un costo-opportunità: una stanza oggetto è una stanza
+ * sentinella in meno (e quindi meno livelli).
  */
 
 import { makeRng, type Rng } from '@engine/prng';

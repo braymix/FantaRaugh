@@ -59,7 +59,7 @@ export function MapScreen() {
             {run.nuzlocke && <span className="ml-2 text-xs font-bold text-blood">NUZLOCKE</span>}
           </div>
           <div className="text-xs text-white/65 font-medium">
-            tappa {Math.min(currentLayer + 1, map.layers.length)}/{map.layers.length} · seed {map.seed}
+            stanza {Math.min(currentLayer + 1, map.layers.length)}/{map.layers.length} · profondità {map.seed}
           </div>
         </div>
         <div className="flex gap-1">
@@ -78,7 +78,7 @@ export function MapScreen() {
           return (
             <div key={layerIndex}>
               <div className="mb-2 text-center text-xs uppercase tracking-wider text-white/50 font-bold">
-                {layerIndex === currentLayer ? '▼ SCEGLI' : `Tappa ${layerIndex + 1}`}
+                {layerIndex === currentLayer ? '▼ SCEGLI STANZA' : `Stanza ${layerIndex + 1}`}
               </div>
               <div className="flex flex-wrap justify-center gap-2">
                 {layer.map((nid) => (

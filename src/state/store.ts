@@ -141,7 +141,12 @@ export const useGame = create<GameState>((set, get) => ({
     // Sessione già presente (refresh pagina): riconcilia subito col cloud.
     getSession().then(async (session) => {
       if (!session) return;
-      const reconciled = await reconcileOnSignIn(session.user.id, get().profile);
+      const preReconcile = get().profile;
+      const reconciled = await reconcileOnSignIn(session.user.id, preReconcile);
+      if (get().profile !== preReconcile) {
+        set({ user: session.user, reconciledUserId: session.user.id });
+        return;
+      }
       const reconciledMap = reconciled.run?.active ? generateRunMap(reconciled.run.seed) : null;
       saveProfile(get().storage, reconciled);
       set({ user: session.user, reconciledUserId: session.user.id, profile: reconciled, map: reconciledMap });
@@ -577,15 +582,19 @@ export const useGame = create<GameState>((set, get) => ({
     }
     const session = await getSession();
     if (session) {
-      const reconciled = await reconcileOnSignIn(session.user.id, get().profile);
-      const storage = get().storage;
-      saveProfile(storage, reconciled);
-      set({
-        user: session.user,
-        reconciledUserId: session.user.id,
-        profile: reconciled,
-        toast: 'Accesso effettuato: salvataggio sincronizzato.',
-      });
+      const preReconcile = get().profile;
+      const reconciled = await reconcileOnSignIn(session.user.id, preReconcile);
+      if (get().profile !== preReconcile) {
+        set({ user: session.user, reconciledUserId: session.user.id, toast: 'Accesso effettuato: salvataggio sincronizzato.' });
+      } else {
+        saveProfile(get().storage, reconciled);
+        set({
+          user: session.user,
+          reconciledUserId: session.user.id,
+          profile: reconciled,
+          toast: 'Accesso effettuato: salvataggio sincronizzato.',
+        });
+      }
     }
     set({ authBusy: false });
   },

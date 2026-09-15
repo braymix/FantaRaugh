@@ -112,6 +112,67 @@ svg {
   background-size: 4px 4px, 100% 100%;
 }
 
+/* --- Estetica dungeon della mappa --- */
+
+/* Muro di pietra: mattoni sfalsati come sfondo del percorso sotterraneo. */
+.bg-dungeon {
+  background-color: #0d0716;
+  background-image:
+    /* fessure orizzontali dei mattoni */
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.5) 0px,
+      rgba(0, 0, 0, 0.5) 2px,
+      transparent 2px,
+      transparent 34px
+    ),
+    /* fessure verticali sfalsate */
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.35) 0px,
+      rgba(0, 0, 0, 0.35) 2px,
+      transparent 2px,
+      transparent 60px
+    ),
+    /* luce fioca dall'alto, buio verso il basso (la discesa) */
+    linear-gradient(180deg, #241634 0%, #160d24 45%, #0a0512 100%);
+  background-size: 100% 34px, 60px 100%, 100% 100%;
+}
+
+/* Corridoio verticale che collega le stanze: la scala di discesa. */
+.dungeon-spine {
+  position: relative;
+}
+.dungeon-spine::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  bottom: -12px;
+  left: 50%;
+  width: 4px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0.28) 0px,
+    rgba(212, 175, 55, 0.28) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  z-index: 0;
+}
+
+/* Alone di torcia sulla stanza attualmente scegliibile. */
+@keyframes torch-flicker {
+  0%, 100% { box-shadow: 0 0 12px 2px rgba(224, 86, 45, 0.45), inset 0 0 8px rgba(224, 86, 45, 0.15); }
+  50% { box-shadow: 0 0 18px 5px rgba(224, 86, 45, 0.65), inset 0 0 12px rgba(224, 86, 45, 0.25); }
+}
+.animate-torch {
+  animation: torch-flicker 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-torch { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-idle,
   .animate-acting,

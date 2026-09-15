@@ -50,16 +50,18 @@ export function MapScreen() {
   const to = Math.min(map.layers.length, currentLayer + 4);
   const visible = map.layers.slice(from, to);
 
+  const totalLayers = map.layers.length;
+
   return (
-    <div className="flex h-full flex-col bg-dither">
-      <div className="flex items-center justify-between border-b-2 border-black/50 bg-night-800 p-3">
+    <div className="flex h-full flex-col bg-dungeon">
+      <div className="flex items-center justify-between border-b-2 border-black/60 bg-night-900/90 p-3">
         <div>
           <div className="font-display text-base leading-tight">
             🏅 {run.badges}/{BALANCE.badgeCount} medaglie
             {run.nuzlocke && <span className="ml-2 text-xs font-bold text-blood">NUZLOCKE</span>}
           </div>
           <div className="text-xs text-white/65 font-medium">
-            stanza {Math.min(currentLayer + 1, map.layers.length)}/{map.layers.length} · profondità {map.seed}
+            profondità {Math.min(currentLayer + 1, totalLayers)}/{totalLayers} · dungeon #{map.seed}
           </div>
         </div>
         <div className="flex gap-1">
@@ -72,31 +74,94 @@ export function MapScreen() {
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
-        {visible.map((layer, i) => {
-          const layerIndex = from + i;
-          return (
-            <div key={layerIndex}>
-              <div className="mb-2 text-center text-xs uppercase tracking-wider text-white/50 font-bold">
-                {layerIndex === currentLayer ? '▼ SCEGLI STANZA' : `Stanza ${layerIndex + 1}`}
+      <div className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="dungeon-spine mx-auto flex max-w-md flex-col items-stretch gap-5">
+          {visible.map((layer, i) => {
+            const layerIndex = from + i;
+            const isCurrent = layerIndex === currentLayer;
+            const isCleared = layerIndex < currentLayer;
+            const hasCommander = layer.some((nid) => {
+              const k = map.nodes[nid]!.kind;
+              return k === 'commander' || k === 'elite' || k === 'boss';
+            });
+            return (
+              <div key={layerIndex} className="relative z-10">
+                <DepthPlaque
+                  depth={layerIndex + 1}
+                  total={totalLayers}
+                  current={isCurrent}
+                  cleared={isCleared}
+                  gate={hasCommander}
+                />
+                <div className="flex flex-wrap justify-center gap-2">
+                  {layer.map((nid) => (
+                    <NodeCard
+                      key={nid}
+                      node={map.nodes[nid]!}
+                      selectable={selectable.has(nid)}
+                      cleared={cleared.has(nid)}
+                      onEnter={() => enterNode(nid)}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {layer.map((nid) => (
-                  <NodeCard
-                    key={nid}
-                    node={map.nodes[nid]!}
-                    selectable={selectable.has(nid)}
-                    cleared={cleared.has(nid)}
-                    onEnter={() => enterNode(nid)}
-                  />
-                ))}
-              </div>
+            );
+          })}
+          {to >= totalLayers && (
+            <div className="relative z-10 pt-1 text-center text-[10px] uppercase tracking-widest text-white/30">
+              ⛧ fondo del dungeon ⛧
             </div>
-          );
-        })}
+          )}
+        </div>
       </div>
 
       {run.pending && <PendingSheet />}
+    </div>
+  );
+}
+
+/** Targa di pietra che segna la profondità della stanza nel dungeon. */
+function DepthPlaque({
+  depth,
+  total,
+  current,
+  cleared,
+  gate,
+}: {
+  depth: number;
+  total: number;
+  current: boolean;
+  cleared: boolean;
+  gate: boolean;
+}) {
+  const label = current
+    ? '▼ SCEGLI STANZA'
+    : cleared
+      ? `Stanza ${depth} · esplorata`
+      : gate
+        ? `Stanza ${depth} · varco sorvegliato`
+        : `Stanza ${depth}`;
+  return (
+    <div className="mb-2 flex items-center justify-center gap-2">
+      <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/20" />
+      <span
+        className={`whitespace-nowrap border-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-pixel ${
+          current
+            ? 'border-ember/70 bg-ember/20 text-ember'
+            : gate
+              ? 'border-gold/50 bg-gold/10 text-gold/90'
+              : cleared
+                ? 'border-emerald-800/50 bg-emerald-950/40 text-emerald-300/70'
+                : 'border-black/50 bg-night-800 text-white/50'
+        }`}
+      >
+        {gate && !current ? '🗝️ ' : ''}
+        {label}
+        <span className="ml-1 text-white/30">
+          {depth}/{total}
+        </span>
+      </span>
+      <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/20" />
     </div>
   );
 }
@@ -116,17 +181,27 @@ function NodeCard({
     <button
       onClick={selectable ? onEnter : undefined}
       disabled={!selectable}
-      className={`w-[108px] border-2 p-1.5 text-left ${
+      className={`relative w-[112px] rounded-t-lg border-2 border-b-4 px-1.5 pb-1.5 pt-2 text-left transition ${
         selectable
-          ? 'border-gold bg-night-600 shadow-pixel'
+          ? 'animate-torch border-ember/70 bg-gradient-to-b from-night-600 to-night-800'
           : cleared
-            ? 'border-emerald-800/60 bg-emerald-950/30 opacity-70'
-            : 'border-black/50 bg-night-800 opacity-45'
+            ? 'border-emerald-900/60 border-b-emerald-950 bg-emerald-950/25 opacity-75'
+            : 'border-black/60 border-b-black bg-night-900/70 opacity-45'
       }`}
     >
+      {/* Arco della porta della stanza */}
+      <span
+        className={`pointer-events-none absolute inset-x-2 top-0 h-1 rounded-b ${
+          selectable ? 'bg-ember/50' : cleared ? 'bg-emerald-700/40' : 'bg-white/10'
+        }`}
+      />
       <div className="flex items-center justify-between">
-        <span className="text-base">{KIND_ICON[node.kind]}</span>
-        {cleared && <span className="text-[10px] text-emerald-400">✓</span>}
+        <span className="text-base leading-none">{KIND_ICON[node.kind]}</span>
+        {cleared ? (
+          <span className="text-[10px] text-emerald-400">✓</span>
+        ) : selectable ? (
+          <span className="text-[9px] text-ember/90">◈</span>
+        ) : null}
       </div>
       <div className="truncate text-[10px] font-bold">{node.preview.title}</div>
       {node.gymType && <TypeBadge type={node.gymType} small />}

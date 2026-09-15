@@ -214,14 +214,20 @@ export const useGame = create<GameState>((set, get) => ({
         return;
       }
 
-      // I caduti: persi per sempre in Nuzlocke, altrimenti tornano con 1 HP.
+      // I caduti: persi per sempre in Nuzlocke, altrimenti tornano in vita.
       for (const uid of outcome.faintedUids) {
         const mon = run.team.find((m) => m.uid === uid);
         if (!mon) continue;
         if (run.nuzlocke) mon.fainted = true;
-        else mon.hp = 1;
+        else mon.fainted = false;
       }
       if (run.nuzlocke) run.team = run.team.filter((m) => !m.fainted);
+
+      // Dopo ogni combattimento vinto la squadra recupera tutte le forze.
+      for (const mon of run.team) {
+        if (mon.fainted) continue;
+        healFull(mon, profile.lineBuffs, run.team);
+      }
 
       const xp = xpForNode(node);
       const evolved = grantTeamXp(run.team, xp);

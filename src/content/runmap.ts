@@ -16,7 +16,7 @@ import { ITEMS } from './items';
 
 export type NodeKind =
   | 'wild' // creatura selvatica: vinci e puoi reclutarla
-  | 'trainer' // allenatore: più esperienza
+  | 'sentinella' // sentinella: guardia del dungeon, più esperienza
   | 'item' // scegli un oggetto tenuto
   | 'trade' // scambia una tua creatura con una di livello superiore
   | 'heal' // cura tutta la squadra
@@ -58,7 +58,7 @@ export interface RunMap {
 
 const KIND_TITLE: Record<NodeKind, string> = {
   wild: 'Creatura selvatica',
-  trainer: 'Allenatore',
+  sentinella: 'Sentinella',
   item: 'Oggetto',
   trade: 'Scambio',
   heal: 'Rifugio',
@@ -72,7 +72,7 @@ const KIND_TITLE: Record<NodeKind, string> = {
 
 const KIND_DESC: Record<NodeKind, string> = {
   wild: 'Una creatura sbarra il passo: battila e potrai reclutarla.',
-  trainer: 'Uno sfidante addestrato: più duro, più esperienza.',
+  sentinella: 'Una sentinella armata: più forte di una creatura selvaggia, più esperienza.',
   item: 'Un oggetto tenuto da scegliere.',
   trade: 'Cedi una creatura, ricevine una di livello superiore.',
   heal: 'La squadra recupera tutte le forze.',
@@ -150,7 +150,7 @@ function pickEncounter(rng: Rng, count: number, level: number, onlyType?: MonTyp
 function pickKind(rng: Rng): NodeKind {
   const roll = rng.next();
   if (roll < 0.28) return 'wild';
-  if (roll < 0.44) return 'trainer';
+  if (roll < 0.44) return 'sentinella';
   if (roll < 0.56) return 'item';
   if (roll < 0.74) return 'heal';
   if (roll < 0.84) return 'ball';
@@ -162,8 +162,8 @@ function pickKind(rng: Rng): NodeKind {
 function levelFor(kind: NodeKind, segment: number): number {
   const base = BALANCE.wildBaseLevel + segment * BALANCE.levelPerBadge;
   switch (kind) {
-    case 'trainer':
-      return base + BALANCE.trainerLevelBonus;
+    case 'sentinella':
+      return base + BALANCE.sentinellaLevelBonus;
     case 'commander':
       return base + BALANCE.gymLevelBonus;
     case 'elite':
@@ -183,7 +183,7 @@ function threatFor(kind: NodeKind): number {
       return 5;
     case 'commander':
       return 4;
-    case 'trainer':
+    case 'sentinella':
       return 3;
     case 'wild':
       return 2;
@@ -204,7 +204,7 @@ function buildNode(rng: Rng, id: string, kind: NodeKind, layer: number, segment:
       // Nella prima tratta si è ancora soli: un solo avversario.
       encounter = pickEncounter(rng, segment === 0 ? 1 : rng.int(1, 2), level);
       break;
-    case 'trainer':
+    case 'sentinella':
       encounter = pickEncounter(rng, segment === 0 ? rng.int(1, 2) : rng.int(2, 3), level);
       break;
     case 'commander': {

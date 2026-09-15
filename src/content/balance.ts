@@ -67,8 +67,8 @@ export const BALANCE = {
   levelPerBadge: 3,
   /** Livello dei nemici nel primo tratto. */
   wildBaseLevel: 5,
-  /** Bonus di livello dei nemici nei nodi allenatore / palestra / élite. */
-  trainerLevelBonus: 2,
+  /** Bonus di livello dei nemici nei nodi sentinella / comandante / élite. */
+  sentinellaLevelBonus: 2,
   gymLevelBonus: 4,
   eliteLevelBonus: 6,
   championLevelBonus: 8,

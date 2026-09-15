@@ -70,10 +70,10 @@ function playRun(starterId: string, seed: number): RunReport {
       if (n.kind === 'item') return 60;
       if (n.kind === 'tutor') return 55;
       if (n.kind === 'wild') return hurt ? 30 : 70;
-      if (n.kind === 'trainer') return hurt ? 10 : 50;
+      if (n.kind === 'sentinella') return hurt ? 10 : 50;
       if (n.kind === 'event') return 40;
       if (n.kind === 'trade') return 30;
-      return 80; // palestra / supremi / campione: obbligati
+      return 80; // comandante / elite / capo: obbligati
     };
     const nextId = [...options].sort((a, b) => score(map.nodes[b]!) - score(map.nodes[a]!))[0]!;
     const node: MapNode = map.nodes[nextId]!;

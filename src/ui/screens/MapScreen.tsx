@@ -87,7 +87,7 @@ export function MapScreen() {
     computeLinks();
     window.addEventListener('resize', computeLinks);
     return () => window.removeEventListener('resize', computeLinks);
-  }, [map, run.currentNodeId, from, to, selectable, visible]);
+  }, [map, run.currentNodeId, from, to]);
 
   return (
     <div className="flex h-full flex-col bg-dungeon">

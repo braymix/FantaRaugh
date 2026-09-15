@@ -587,11 +587,13 @@ export const useGame = create<GameState>((set, get) => ({
       if (get().profile !== preReconcile) {
         set({ user: session.user, reconciledUserId: session.user.id, toast: 'Accesso effettuato: salvataggio sincronizzato.' });
       } else {
+        const reconciledMap = reconciled.run?.active ? generateRunMap(reconciled.run.seed) : null;
         saveProfile(get().storage, reconciled);
         set({
           user: session.user,
           reconciledUserId: session.user.id,
           profile: reconciled,
+          map: reconciledMap,
           toast: 'Accesso effettuato: salvataggio sincronizzato.',
         });
       }

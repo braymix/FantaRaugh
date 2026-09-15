@@ -1,10 +1,14 @@
 # Blueprint Render per Fantaraugh (Static Site).
 #
-# La demo NON ha backend: lo stato del giocatore è salvato in localStorage nel
-# browser (vedi src/state/storage.ts). Su un Static Site questo è esattamente ciò
-# che serve — i salvataggi persistono nel browser dell'utente, senza database.
-# (Un "DB che non persiste" capita quando si usa un disco effimero o un servizio
-#  che si riavvia: qui non serve alcun DB.)
+# Il sito resta uno Static Site senza server custom: lo stato del giocatore è
+# salvato in localStorage nel browser (vedi src/state/storage.ts), che resta
+# la fonte di verità immediata e l'unica usata in modalità ospite. Se sono
+# configurate VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY (non impostate di
+# default: vedi .env.example), un utente che fa login sincronizza lo stesso
+# profilo su un BaaS gestito (Supabase) per ritrovarlo su un altro dispositivo
+# — vedi src/state/cloudSync.ts. Nessun server/database gestito da questo
+# Blueprint: le env var vanno aggiunte manualmente su Render se si vuole
+# abilitare il salvataggio cloud.
 #
 # Deploy: connetti il repo su Render → "New +" → "Blueprint" → seleziona questo file.
 services:

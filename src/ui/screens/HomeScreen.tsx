@@ -2,6 +2,7 @@
 
 import { useGame } from '@state/store';
 import { BALANCE } from '@content/balance';
+import { AuthPanel } from '../components/AuthPanel';
 
 export function HomeScreen() {
   const profile = useGame((s) => s.profile);
@@ -57,6 +58,8 @@ export function HomeScreen() {
           In Nuzlocke una creatura che cade è perduta per sempre: ogni scelta pesa il doppio.
         </p>
       </div>
+
+      <AuthPanel />
 
       <button className="text-[11px] text-white/30 underline" onClick={hardReset}>
         Azzera profilo

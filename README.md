@@ -83,12 +83,13 @@ In alternativa, a mano: **New +** → **Static Site** →
 - Publish Directory: `dist`
 - Aggiungi una rewrite rule `/*` → `/index.html`.
 
-**Persistenza / "il DB non persiste":** questa demo **non ha backend né database**.
+**Persistenza / "il DB non persiste":** questa demo **non ha un server custom**.
 Lo stato del giocatore è salvato in `localStorage` (client-side, `src/state/storage.ts`)
-e persiste nel browser dell'utente. Su uno Static Site non c'è disco effimero né
-servizio che si riavvia: i salvataggi non spariscono. Un DB reale servirà solo quando
-si vorrà sincronizzare tra dispositivi/account — l'interfaccia `StorageAdapter` è già
-pronta per sostituire localStorage con un backend senza toccare il resto.
+e resta la fonte di verità immediata anche quando il salvataggio cloud è attivo. Su
+uno Static Site non c'è disco effimero né servizio che si riavvia: i salvataggi non
+spariscono. Login e sync cross-dispositivo sono opzionali via un BaaS gestito
+(Supabase) e restano disattivati finché non si configurano le env var — vedi
+[`render.yaml`](./render.yaml) e `.env.example`.
 
 ## Aggiungere contenuti
 
@@ -105,7 +106,8 @@ con 8 palestre a tema + Quattro Supremi + Campione, reclutamenti/scambi/maestro 
 mosse, deposito da 1 posto, Nuzlocke, metaprogressione con potenziamenti di linea e
 tratti di tipo, sprite pixel procedurali, analizzatore di debolezze, tutorial
 guidato + regole complete in due livelli, salvataggio localStorage con migrazione
-additiva, **97 test**, simulatore di run complete, PWA offline.
+additiva, login e salvataggio cloud opzionali (Supabase), **97 test**, simulatore
+di run complete, PWA offline.
 
-**Non ancora**: Battle Tower come modalità separata, sfide giornaliere, account/cloud
-save, audio, acquisti reali.
+**Non ancora**: Battle Tower come modalità separata, sfide giornaliere, audio,
+acquisti reali.

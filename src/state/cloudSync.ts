@@ -34,6 +34,20 @@ export async function pushCloudProfile(userId: string, profile: MetaProfile): Pr
   });
 }
 
+const pushQueues = new Map<string, Promise<void>>();
+
+/**
+ * Come pushCloudProfile, ma incoda le chiamate per utente: ogni push aspetta
+ * che la precedente sia completata prima di partire, cosi le risposte di rete
+ * non possono arrivare fuori ordine e sovrascrivere un profilo piu recente
+ * con uno piu vecchio.
+ */
+export function queuePushCloudProfile(userId: string, profile: MetaProfile): void {
+  const previous = pushQueues.get(userId) ?? Promise.resolve();
+  const next = previous.then(() => pushCloudProfile(userId, profile)).catch(() => {});
+  pushQueues.set(userId, next);
+}
+
 /**
  * Da chiamare subito dopo un sign-in riuscito: cloud vince se presente,
  * altrimenti il locale viene caricato sul cloud. Ritorna il profilo da usare

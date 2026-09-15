@@ -20,7 +20,7 @@ import { loadProfile, saveProfile } from './save';
 import { createMetaProfile } from './meta';
 import { defaultStorage, type StorageAdapter } from './storage';
 import { cloudAuthAvailable, getSession, onAuthStateChange, signIn, signOut, signUp } from './auth';
-import { pushCloudProfile, reconcileOnSignIn } from './cloudSync';
+import { queuePushCloudProfile, reconcileOnSignIn } from './cloudSync';
 import {
   essenceForNode,
   grantTeamXp,
@@ -137,8 +137,13 @@ export const useGame = create<GameState>((set, get) => ({
 
     if (!get().cloudAvailable) return;
     // Sessione già presente (refresh pagina): riconcilia subito col cloud.
-    getSession().then((session) => {
-      if (session) set({ user: session.user });
+    getSession().then(async (session) => {
+      if (!session) return;
+      set({ user: session.user });
+      const reconciled = await reconcileOnSignIn(session.user.id, get().profile);
+      const reconciledMap = reconciled.run?.active ? generateRunMap(reconciled.run.seed) : null;
+      saveProfile(get().storage, reconciled);
+      set({ profile: reconciled, map: reconciledMap });
     });
     onAuthStateChange((session) => {
       set({ user: session?.user ?? null });
@@ -150,7 +155,7 @@ export const useGame = create<GameState>((set, get) => ({
     saveProfile(storage, profile);
     // Push cloud "best effort": il salvataggio locale (sincrono, sempre valido)
     // resta la fonte di verità immediata; il cloud insegue in background.
-    if (cloudAvailable && user) void pushCloudProfile(user.id, profile);
+    if (cloudAvailable && user) queuePushCloudProfile(user.id, profile);
   },
 
   hardReset: () => {

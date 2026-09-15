@@ -32,7 +32,7 @@ export function MetaScreen() {
       <div className="flex items-center justify-between border-b-2 border-black/50 bg-night-800 p-3">
         <div>
           <div className="font-display text-lg">Potenziamenti permanenti</div>
-          <div className="text-[11px] text-white/45">
+          <div className="text-xs text-white/70 font-medium">
             {profile.essence} ✦ essenze · {BALANCE.lineBuffCost} per punto (+
             {Math.round(BALANCE.lineBuffStep * 100)}% ciascuno)
           </div>
@@ -56,14 +56,14 @@ export function MetaScreen() {
                   <div className="truncate text-xs font-bold text-parchment">
                     {stages.map((id) => CREATURE_MAP[id]!.name).join(' → ')}
                   </div>
-                  <div className="text-[10px] text-white/45">
+                  <div className="text-xs text-white/70 font-medium">
                     <span className={ROLE_META[first.role].color}>{ROLE_META[first.role].label}</span>{' '}
                     <TypeRow types={first.types} small />
                   </div>
                 </div>
               </div>
               {!known ? (
-                <div className="mt-1 text-[10px] text-white/40">Non ancora incontrata.</div>
+                <div className="mt-2 text-xs text-white/60 font-medium">Non ancora incontrata.</div>
               ) : (
                 <div className="mt-2 grid grid-cols-5 gap-1">
                   {BUYABLE.map(({ stat, label }) => {
@@ -74,7 +74,7 @@ export function MetaScreen() {
                         key={stat}
                         disabled={maxed || profile.essence < BALANCE.lineBuffCost}
                         onClick={() => buy(line, stat)}
-                        className="border-2 border-black/50 bg-white/5 px-1 py-1 text-[9px] leading-tight text-white/70 disabled:opacity-35"
+                        className="border-2 border-black/50 bg-white/5 px-1 py-1 text-[10px] font-medium leading-tight text-white/85 disabled:opacity-35"
                       >
                         <div>{label}</div>
                         <div className="font-bold text-gold">

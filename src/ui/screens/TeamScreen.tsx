@@ -43,7 +43,7 @@ export function TeamScreen() {
       <div className="flex items-center justify-between border-b-2 border-black/50 bg-night-800 p-3">
         <div>
           <div className="font-display text-base">Squadra</div>
-          <div className="text-[10px] text-white/45">
+          <div className="text-xs text-white/65 font-medium">
             {run.team.length}/{BALANCE.maxRecruits} creature · borsa {run.bag.length}
           </div>
         </div>
@@ -55,9 +55,9 @@ export function TeamScreen() {
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
         {/* Analizzatore di debolezze */}
         <div className="card">
-          <div className="mb-1 text-[10px] uppercase tracking-wider text-white/40">Debolezze di squadra</div>
+          <div className="mb-2 text-xs uppercase tracking-wider text-white/60 font-bold">Debolezze di squadra</div>
           {worst.length === 0 ? (
-            <div className="text-[11px] text-emerald-300">Nessuna debolezza condivisa: buona copertura.</div>
+            <div className="text-sm text-emerald-300 font-medium">Nessuna debolezza condivisa: buona copertura.</div>
           ) : (
             <div className="flex flex-wrap gap-1">
               {worst.map((t) => (

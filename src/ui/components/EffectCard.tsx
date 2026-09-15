@@ -25,24 +25,24 @@ export function EffectCard({
   return (
     <div className={`border-2 border-black/40 bg-black/30 ${compact ? 'p-1.5' : 'p-2'}`}>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-bold text-parchment">{effect.name}</span>
+        <span className="text-sm font-bold text-parchment">{effect.name}</span>
         {badge && (
-          <span className="shrink-0 border border-gold/50 bg-gold/15 px-1 text-[8px] uppercase tracking-wide text-gold">
+          <span className="shrink-0 border border-gold/50 bg-gold/15 px-1 text-[9px] font-semibold uppercase tracking-wide text-gold">
             {badge}
           </span>
         )}
       </div>
 
       {/* Quando → su chi */}
-      <div className="mt-0.5 text-[9px] uppercase tracking-wide text-white/40">
-        {p.triggerLabel} <span className="text-white/25">→</span> {p.targetLabel}
+      <div className="mt-1 text-xs uppercase tracking-wide text-white/60 font-medium">
+        {p.triggerLabel} <span className="text-white/40">→</span> {p.targetLabel}
       </div>
 
       {/* Cosa fa */}
       <ul className="mt-1 space-y-0.5">
         {p.actions.map((a, i) => (
-          <li key={i} className="flex gap-1.5 text-[11px] leading-snug text-white/85">
-            <span className="shrink-0 text-white/50">{a.icon}</span>
+          <li key={i} className="flex gap-1.5 text-sm leading-snug text-white/95">
+            <span className="shrink-0 text-white/60">{a.icon}</span>
             <span>{a.text}</span>
           </li>
         ))}
@@ -50,21 +50,21 @@ export function EffectCard({
 
       {/* Condizioni */}
       {p.conditions.length > 0 && (
-        <div className="mt-1 border-l-2 border-amber-500/50 pl-1.5 text-[10px] italic leading-snug text-amber-200/80">
+        <div className="mt-1 border-l-2 border-amber-500/50 pl-1.5 text-xs italic leading-snug text-amber-200">
           solo se {p.conditions.join(' e ')}
         </div>
       )}
 
       {/* Chip: costo, probabilità, ricarica, limiti, tag */}
       {(p.chips.length > 0 || p.tags.length > 0) && (
-        <div className="mt-1 flex flex-wrap gap-1">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {p.chips.map((c) => (
-            <span key={c} className="border border-white/15 bg-white/5 px-1 text-[9px] text-white/60">
+            <span key={c} className="border border-white/20 bg-white/5 px-1.5 text-[10px] font-medium text-white/75">
               {c}
             </span>
           ))}
           {p.tags.map((t) => (
-            <span key={t} className="border border-arcane/40 bg-arcane/15 px-1 text-[9px] text-violet-200">
+            <span key={t} className="border border-arcane/50 bg-arcane/15 px-1.5 text-[10px] font-medium text-violet-200">
               {TAG_LABEL[t]}
             </span>
           ))}
@@ -77,13 +77,13 @@ export function EffectCard({
 /** Confronto numerico prima → dopo, per capire l'effetto di un equipaggiamento. */
 export function StatDelta({ label, from, to }: { label: string; from: number; to: number }) {
   const diff = Math.round(to - from);
-  const color = diff > 0 ? 'text-emerald-300' : diff < 0 ? 'text-red-300' : 'text-white/40';
+  const color = diff > 0 ? 'text-emerald-300' : diff < 0 ? 'text-red-300' : 'text-white/50';
   return (
-    <div className="flex items-baseline justify-between border-b border-white/5 py-0.5 text-[11px] last:border-b-0">
-      <span className="text-white/45">{label}</span>
-      <span className="flex items-baseline gap-1">
+    <div className="flex items-baseline justify-between border-b border-white/5 py-1 text-sm last:border-b-0">
+      <span className="text-white/70 font-medium">{label}</span>
+      <span className="flex items-baseline gap-1.5">
         <span className="font-semibold text-parchment">{Math.round(to)}</span>
-        {diff !== 0 && <span className={`text-[10px] ${color}`}>{diff > 0 ? `+${diff}` : diff}</span>}
+        {diff !== 0 && <span className={`text-xs font-medium ${color}`}>{diff > 0 ? `+${diff}` : diff}</span>}
       </span>
     </div>
   );

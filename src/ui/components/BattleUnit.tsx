@@ -6,12 +6,12 @@ import { EnergyBar, GaugeBar, HpBar } from './Bars';
 import { Sprite } from './Sprite';
 
 const FLOAT_STYLE: Record<FloatText['kind'], string> = {
-  damage: 'text-red-300',
-  crit: 'text-red-400 font-bold text-lg',
-  heal: 'text-emerald-300',
-  miss: 'text-gray-400 italic',
-  shield: 'text-sky-300',
-  status: 'text-violet-200 text-xs',
+  damage: 'text-red-200 font-bold',
+  crit: 'text-red-300 font-bold text-xl',
+  heal: 'text-emerald-200 font-bold',
+  miss: 'text-gray-300 italic font-semibold',
+  shield: 'text-sky-200 font-bold',
+  status: 'text-violet-100 text-sm font-semibold',
 };
 
 export function BattleUnit({
@@ -57,14 +57,14 @@ export function BattleUnit({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-1">
-            <span className="truncate text-[11px] font-semibold leading-tight text-parchment">{unit.name}</span>
-            <span className={`shrink-0 text-[9px] ${role.color}`} title={role.label}>
+            <span className="truncate text-sm font-semibold leading-tight text-parchment">{unit.name}</span>
+            <span className={`shrink-0 text-[10px] ${role.color}`} title={role.label}>
               {unit.row === 'front' ? '▮' : '▯'}
             </span>
           </div>
 
           <HpBar hp={unit.hp} maxHp={unit.maxHp} shield={unit.shield} />
-          <div className="flex items-center justify-between text-[9px] leading-tight text-white/55">
+          <div className="flex items-center justify-between text-[10px] leading-tight text-white/75 font-medium">
             <span>{unit.alive ? `${unit.hp}/${unit.maxHp}` : 'caduto'}</span>
             {unit.shield > 0 && <span className="text-sky-300">◈{unit.shield}</span>}
           </div>
@@ -82,10 +82,10 @@ export function BattleUnit({
             <span
               key={s.id}
               title={`${s.name} ×${s.stacks} · ${s.duration} turni`}
-              className={`border px-1 text-[9px] leading-tight ${
+              className={`border px-1 text-[10px] font-medium leading-tight ${
                 s.kind === 'buff'
-                  ? 'border-emerald-700/60 bg-emerald-900/50 text-emerald-200'
-                  : 'border-red-800/60 bg-red-900/50 text-red-200'
+                  ? 'border-emerald-700/70 bg-emerald-900/60 text-emerald-100'
+                  : 'border-red-800/70 bg-red-900/60 text-red-100'
               }`}
             >
               {statusIcon(s.id)} {s.name}

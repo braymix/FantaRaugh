@@ -57,10 +57,10 @@ export function BattleScreen() {
   return (
     <div className="flex h-full flex-col bg-dither">
       {/* Barra di stato */}
-      <div className="flex items-center justify-between border-b-2 border-black/50 bg-night-800 px-2 py-1 text-[10px] text-white/50">
+      <div className="flex items-center justify-between border-b-2 border-black/50 bg-night-800 px-2 py-1 text-xs text-white/70 font-medium">
         <span>{display.turn > 0 ? `Turno ${display.turn}` : 'Preparativi'}</span>
         <div className="flex items-center gap-2">
-          <span className="text-white/30">seed {battle.seed}</span>
+          <span className="text-white/50 text-[10px]">seed {battle.seed}</span>
           <button onClick={() => setHelp(true)} className="border-2 border-black/50 bg-white/10 px-1.5 text-parchment">
             ?
           </button>
@@ -70,7 +70,7 @@ export function BattleScreen() {
       <div className="flex flex-1 flex-col overflow-y-auto">
       {/* Nemici */}
       <div className="px-2 pt-2">
-        <div className="mb-1 text-[9px] uppercase tracking-widest text-red-300/70">Nemici</div>
+        <div className="mb-1 text-xs uppercase tracking-wider text-red-300 font-bold">Nemici</div>
         <div className="grid grid-cols-2 gap-1.5">
           {enemies.map((u) => (
             <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
@@ -80,7 +80,7 @@ export function BattleScreen() {
 
       {/* Squadra */}
       <div className="px-2 pb-1">
-        <div className="mb-1 text-[9px] uppercase tracking-widest text-emerald-300/70">La tua squadra</div>
+        <div className="mb-1 text-xs uppercase tracking-wider text-emerald-300 font-bold">La tua squadra</div>
         <div className="grid grid-cols-2 gap-1.5">
           {players.map((u) => (
             <BattleUnit key={u.uid} unit={u} threshold={display.threshold} floats={floatsFor(u)} onInspect={setInspect} />
@@ -92,7 +92,7 @@ export function BattleScreen() {
         {ability && (
           <div
             key={ability.id}
-            className={`shrink-0 border-b-2 border-black/40 px-2 py-1 text-center text-[11px] ${
+            className={`shrink-0 border-b-2 border-black/40 px-2 py-2 text-center text-sm font-medium ${
               ability.isUltimate ? 'bg-gold/20 text-gold' : 'bg-white/5 text-parchment'
             }`}
           >
@@ -100,7 +100,7 @@ export function BattleScreen() {
             {ability.isUltimate && ' ✦'}
           </div>
         )}
-        <div className="flex min-h-0 flex-1 flex-col justify-end gap-0.5 overflow-y-auto p-2 text-[10px] leading-snug text-white/65">
+        <div className="flex min-h-0 flex-1 flex-col justify-end gap-0.5 overflow-y-auto p-2 text-xs leading-snug text-white/75">
           {display.logLines.slice(-8).map((l, i) => (
             <div key={i}>{l}</div>
           ))}

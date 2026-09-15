@@ -56,9 +56,9 @@ export function MapScreen() {
         <div>
           <div className="font-display text-base leading-tight">
             🏅 {run.badges}/{BALANCE.badgeCount} medaglie
-            {run.nuzlocke && <span className="ml-2 text-[10px] text-blood">NUZLOCKE</span>}
+            {run.nuzlocke && <span className="ml-2 text-xs font-bold text-blood">NUZLOCKE</span>}
           </div>
-          <div className="text-[10px] text-white/40">
+          <div className="text-xs text-white/65 font-medium">
             tappa {Math.min(currentLayer + 1, map.layers.length)}/{map.layers.length} · seed {map.seed}
           </div>
         </div>
@@ -77,8 +77,8 @@ export function MapScreen() {
           const layerIndex = from + i;
           return (
             <div key={layerIndex}>
-              <div className="mb-1 text-center text-[9px] uppercase tracking-widest text-white/30">
-                {layerIndex === currentLayer ? '▼ scegli' : `tappa ${layerIndex + 1}`}
+              <div className="mb-2 text-center text-xs uppercase tracking-wider text-white/50 font-bold">
+                {layerIndex === currentLayer ? '▼ SCEGLI' : `Tappa ${layerIndex + 1}`}
               </div>
               <div className="flex flex-wrap justify-center gap-2">
                 {layer.map((nid) => (

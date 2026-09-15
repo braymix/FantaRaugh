@@ -51,6 +51,7 @@ interface GameState {
   // Account cloud (Supabase, opzionale)
   cloudAvailable: boolean;
   user: Session['user'] | null;
+  reconciledUserId: string | null;
   authBusy: boolean;
   authError: string | null;
 
@@ -125,6 +126,7 @@ export const useGame = create<GameState>((set, get) => ({
 
   cloudAvailable: cloudAuthAvailable(),
   user: null,
+  reconciledUserId: null,
   authBusy: false,
   authError: null,
 
@@ -139,11 +141,10 @@ export const useGame = create<GameState>((set, get) => ({
     // Sessione già presente (refresh pagina): riconcilia subito col cloud.
     getSession().then(async (session) => {
       if (!session) return;
-      set({ user: session.user });
       const reconciled = await reconcileOnSignIn(session.user.id, get().profile);
       const reconciledMap = reconciled.run?.active ? generateRunMap(reconciled.run.seed) : null;
       saveProfile(get().storage, reconciled);
-      set({ profile: reconciled, map: reconciledMap });
+      set({ user: session.user, reconciledUserId: session.user.id, profile: reconciled, map: reconciledMap });
     });
     onAuthStateChange((session) => {
       set({ user: session?.user ?? null });
@@ -151,11 +152,11 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   persist: () => {
-    const { storage, profile, user, cloudAvailable } = get();
+    const { storage, profile, user, reconciledUserId, cloudAvailable } = get();
     saveProfile(storage, profile);
     // Push cloud "best effort": il salvataggio locale (sincrono, sempre valido)
     // resta la fonte di verità immediata; il cloud insegue in background.
-    if (cloudAvailable && user) queuePushCloudProfile(user.id, profile);
+    if (cloudAvailable && user && user.id === reconciledUserId) queuePushCloudProfile(user.id, profile);
   },
 
   hardReset: () => {
@@ -579,7 +580,12 @@ export const useGame = create<GameState>((set, get) => ({
       const reconciled = await reconcileOnSignIn(session.user.id, get().profile);
       const storage = get().storage;
       saveProfile(storage, reconciled);
-      set({ user: session.user, profile: reconciled, toast: 'Accesso effettuato: salvataggio sincronizzato.' });
+      set({
+        user: session.user,
+        reconciledUserId: session.user.id,
+        profile: reconciled,
+        toast: 'Accesso effettuato: salvataggio sincronizzato.',
+      });
     }
     set({ authBusy: false });
   },
@@ -587,6 +593,6 @@ export const useGame = create<GameState>((set, get) => ({
   authSignOut: async () => {
     set({ authBusy: true, authError: null });
     await signOut();
-    set({ authBusy: false, user: null, toast: 'Disconnesso: il salvataggio resta locale.' });
+    set({ authBusy: false, user: null, reconciledUserId: null, toast: 'Disconnesso: il salvataggio resta locale.' });
   },
 }));

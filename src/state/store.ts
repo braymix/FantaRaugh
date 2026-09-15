@@ -8,6 +8,7 @@
  */
 
 import { create } from 'zustand';
+import type { Session } from '@supabase/supabase-js';
 import { BALANCE } from '@content/balance';
 import { CREATURE_MAP } from '@content/creatures';
 import { ITEM_MAP } from '@content/items';
@@ -18,6 +19,8 @@ import { healFull } from './party';
 import { loadProfile, saveProfile } from './save';
 import { createMetaProfile } from './meta';
 import { defaultStorage, type StorageAdapter } from './storage';
+import { cloudAuthAvailable, getSession, onAuthStateChange, signIn, signOut, signUp } from './auth';
+import { pushCloudProfile, reconcileOnSignIn } from './cloudSync';
 import {
   essenceForNode,
   grantTeamXp,
@@ -45,6 +48,12 @@ interface GameState {
   lastSummary: NodeSummary | null;
   toast: string | null;
 
+  // Account cloud (Supabase, opzionale)
+  cloudAvailable: boolean;
+  user: Session['user'] | null;
+  authBusy: boolean;
+  authError: string | null;
+
   init: () => void;
   persist: () => void;
   hardReset: () => void;
@@ -53,6 +62,11 @@ interface GameState {
   toggleNuzlocke: () => void;
   closeTutorial: () => void;
   replayTutorial: () => void;
+
+  // Account cloud
+  authSignUp: (email: string, password: string) => Promise<void>;
+  authSignIn: (email: string, password: string) => Promise<void>;
+  authSignOut: () => Promise<void>;
 
   // Run
   startRun: (starterId: string, seed?: number) => void;
@@ -109,15 +123,35 @@ export const useGame = create<GameState>((set, get) => ({
   lastSummary: null,
   toast: null,
 
+  cloudAvailable: cloudAuthAvailable(),
+  user: null,
+  authBusy: false,
+  authError: null,
+
   init: () => {
     const storage = get().storage;
     const profile = loadProfile(storage);
     const map = profile.run?.active ? generateRunMap(profile.run.seed) : null;
     set({ profile, map });
     saveProfile(storage, profile);
+
+    if (!get().cloudAvailable) return;
+    // Sessione già presente (refresh pagina): riconcilia subito col cloud.
+    getSession().then((session) => {
+      if (session) set({ user: session.user });
+    });
+    onAuthStateChange((session) => {
+      set({ user: session?.user ?? null });
+    });
   },
 
-  persist: () => saveProfile(get().storage, get().profile),
+  persist: () => {
+    const { storage, profile, user, cloudAvailable } = get();
+    saveProfile(storage, profile);
+    // Push cloud "best effort": il salvataggio locale (sincrono, sempre valido)
+    // resta la fonte di verità immediata; il cloud insegue in background.
+    if (cloudAvailable && user) void pushCloudProfile(user.id, profile);
+  },
 
   hardReset: () => {
     const profile = createMetaProfile();
@@ -519,5 +553,35 @@ export const useGame = create<GameState>((set, get) => ({
     profile.essence -= BALANCE.lineBuffCost;
     set({ profile, toast: `Potenziamento permanente applicato alla linea.` });
     get().persist();
+  },
+
+  authSignUp: async (email, password) => {
+    set({ authBusy: true, authError: null });
+    const result = await signUp(email, password);
+    set({ authBusy: false, authError: result.error ?? null });
+    if (result.ok) set({ toast: 'Registrazione avviata: controlla la mail per confermare.' });
+  },
+
+  authSignIn: async (email, password) => {
+    set({ authBusy: true, authError: null });
+    const result = await signIn(email, password);
+    if (!result.ok) {
+      set({ authBusy: false, authError: result.error ?? null });
+      return;
+    }
+    const session = await getSession();
+    if (session) {
+      const reconciled = await reconcileOnSignIn(session.user.id, get().profile);
+      const storage = get().storage;
+      saveProfile(storage, reconciled);
+      set({ user: session.user, profile: reconciled, toast: 'Accesso effettuato: salvataggio sincronizzato.' });
+    }
+    set({ authBusy: false });
+  },
+
+  authSignOut: async () => {
+    set({ authBusy: true, authError: null });
+    await signOut();
+    set({ authBusy: false, user: null, toast: 'Disconnesso: il salvataggio resta locale.' });
   },
 }));

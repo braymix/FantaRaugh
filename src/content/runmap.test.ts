@@ -18,7 +18,7 @@ describe('mappa della run', () => {
     expect(kinds.filter((k) => k === 'commander')).toHaveLength(BALANCE.badgeCount);
     expect(kinds.filter((k) => k === 'elite')).toHaveLength(3);
     expect(kinds.filter((k) => k === 'boss')).toHaveLength(1);
-    // Il Capo è l'ultima tappa.
+    // Il Capo è l'ultima stanza del dungeon.
     expect(m.layers.at(-1)).toEqual(['boss']);
   });
 

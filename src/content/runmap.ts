@@ -1,11 +1,11 @@
 /**
- * Mappa della run, in stile Pokelike: una lunga catena di nodi ramificata con
- * **8 palestre a tema di tipo** come checkpoint, poi i Quattro Supremi e il
- * Campione.
+ * Mappa del dungeon: una lunga catena di stanze ramificata con
+ * **7 comandanti a tema di tipo** come checkpoint di ascesa del dungeon, poi
+ * i 3 leader e il capo finale.
  *
- * Deterministica dal seed: stesso seed ⇒ stessa mappa, stessi incontri, stesse
- * offerte. Ogni scelta di percorso ha un costo-opportunità: un nodo oggetto è un
- * nodo allenatore in meno (e quindi meno livelli).
+ * Deterministica dal seed: stesso seed ⇒ stessa mappa, stesse stanze, stessi incontri.
+ * Ogni scelta di percorso ha un costo-opportunità: una stanza oggetto è una stanza
+ * sentinella in meno (e quindi meno livelli).
  */
 
 import { makeRng, type Rng } from '@engine/prng';
@@ -16,7 +16,7 @@ import { ITEMS } from './items';
 
 export type NodeKind =
   | 'wild' // creatura selvatica: vinci e puoi reclutarla
-  | 'trainer' // allenatore: più esperienza
+  | 'sentinella' // sentinella: guardia del dungeon, più esperienza
   | 'item' // scegli un oggetto tenuto
   | 'trade' // scambia una tua creatura con una di livello superiore
   | 'heal' // cura tutta la squadra
@@ -58,7 +58,7 @@ export interface RunMap {
 
 const KIND_TITLE: Record<NodeKind, string> = {
   wild: 'Creatura selvatica',
-  trainer: 'Allenatore',
+  sentinella: 'Sentinella',
   item: 'Oggetto',
   trade: 'Scambio',
   heal: 'Rifugio',
@@ -72,7 +72,7 @@ const KIND_TITLE: Record<NodeKind, string> = {
 
 const KIND_DESC: Record<NodeKind, string> = {
   wild: 'Una creatura sbarra il passo: battila e potrai reclutarla.',
-  trainer: 'Uno sfidante addestrato: più duro, più esperienza.',
+  sentinella: 'Una sentinella armata: più forte di una creatura selvaggia, più esperienza.',
   item: 'Un oggetto tenuto da scegliere.',
   trade: 'Cedi una creatura, ricevine una di livello superiore.',
   heal: 'La squadra recupera tutte le forze.',
@@ -150,7 +150,7 @@ function pickEncounter(rng: Rng, count: number, level: number, onlyType?: MonTyp
 function pickKind(rng: Rng): NodeKind {
   const roll = rng.next();
   if (roll < 0.28) return 'wild';
-  if (roll < 0.44) return 'trainer';
+  if (roll < 0.44) return 'sentinella';
   if (roll < 0.56) return 'item';
   if (roll < 0.74) return 'heal';
   if (roll < 0.84) return 'ball';
@@ -162,8 +162,8 @@ function pickKind(rng: Rng): NodeKind {
 function levelFor(kind: NodeKind, segment: number): number {
   const base = BALANCE.wildBaseLevel + segment * BALANCE.levelPerBadge;
   switch (kind) {
-    case 'trainer':
-      return base + BALANCE.trainerLevelBonus;
+    case 'sentinella':
+      return base + BALANCE.sentinellaLevelBonus;
     case 'commander':
       return base + BALANCE.gymLevelBonus;
     case 'elite':
@@ -183,7 +183,7 @@ function threatFor(kind: NodeKind): number {
       return 5;
     case 'commander':
       return 4;
-    case 'trainer':
+    case 'sentinella':
       return 3;
     case 'wild':
       return 2;
@@ -201,10 +201,10 @@ function buildNode(rng: Rng, id: string, kind: NodeKind, layer: number, segment:
 
   switch (kind) {
     case 'wild':
-      // Nella prima tratta si è ancora soli: un solo avversario.
+      // Nel primo livello si è ancora soli: un solo avversario.
       encounter = pickEncounter(rng, segment === 0 ? 1 : rng.int(1, 2), level);
       break;
-    case 'trainer':
+    case 'sentinella':
       encounter = pickEncounter(rng, segment === 0 ? rng.int(1, 2) : rng.int(2, 3), level);
       break;
     case 'commander': {
@@ -308,7 +308,7 @@ export function generateRunMap(seed: number): RunMap {
       for (let i = 0; i < width; i++) {
         const layer = layers.length;
         const id = `s${segment}_l${step}_${i}`;
-        // La primissima tappa offre sempre un Richiamo e uno scontro morbido: si
+        // La primissima stanza del dungeon offre sempre un Richiamo e uno scontro morbido: si
         // parte da soli, e trovare un secondo compagno non può dipendere dai dadi.
         const forced: NodeKind | null =
           segment === 0 && step === 0 ? (i === 0 ? 'ball' : i === 1 ? 'wild' : null) : null;

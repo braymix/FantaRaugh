@@ -1,9 +1,9 @@
 /**
- * Mappa della run: si sceglie il percorso nodo per nodo. Ogni scelta ha un costo
- * opportunità (un oggetto è un allenatore in meno, e quindi meno livelli).
+ * Mappa della run: si sceglie il percorso nodo per nodo attraverso le stanze del dungeon.
+ * Ogni scelta ha un costo opportunità (un oggetto è una sentinella in meno, e quindi meno livelli).
  *
- * Mostra solo la porzione vicina del viaggio: la mappa completa è lunga 8 tratte
- * più Quattro Supremi e Campione.
+ * Mostra solo la porzione vicina del viaggio: il dungeon completo è lungo 7 tratte
+ * di comandanti più 3 leader e il capo finale.
  */
 
 import { BALANCE } from '@content/balance';
@@ -17,7 +17,7 @@ import { threatStars } from '../format';
 
 const KIND_ICON: Record<NodeKind, string> = {
   wild: '⚔️',
-  trainer: '🎯',
+  sentinella: '🛡️',
   item: '📦',
   trade: '🔄',
   heal: '🏕️',
@@ -59,7 +59,7 @@ export function MapScreen() {
             {run.nuzlocke && <span className="ml-2 text-xs font-bold text-blood">NUZLOCKE</span>}
           </div>
           <div className="text-xs text-white/65 font-medium">
-            tappa {Math.min(currentLayer + 1, map.layers.length)}/{map.layers.length} · seed {map.seed}
+            stanza {Math.min(currentLayer + 1, map.layers.length)}/{map.layers.length} · profondità {map.seed}
           </div>
         </div>
         <div className="flex gap-1">
@@ -78,7 +78,7 @@ export function MapScreen() {
           return (
             <div key={layerIndex}>
               <div className="mb-2 text-center text-xs uppercase tracking-wider text-white/50 font-bold">
-                {layerIndex === currentLayer ? '▼ SCEGLI' : `Tappa ${layerIndex + 1}`}
+                {layerIndex === currentLayer ? '▼ SCEGLI STANZA' : `Stanza ${layerIndex + 1}`}
               </div>
               <div className="flex flex-wrap justify-center gap-2">
                 {layer.map((nid) => (

@@ -61,14 +61,14 @@ export const BALANCE = {
   starterLevel: 5,
   /** Medaglie da conquistare prima dei tre leader e del capo. */
   badgeCount: 7,
-  /** Nodi (oltre al comandante) in ogni tratta verso una medaglia. */
+  /** Stanze (oltre al comandante) in ogni livello del dungeon. */
   nodesPerSegment: 3,
-  /** Quanto sale il livello dei nemici per ogni medaglia conquistata. */
+  /** Quanto sale il livello dei nemici per ogni comandante sconfitto. */
   levelPerBadge: 3,
-  /** Livello dei nemici nel primo tratto. */
+  /** Livello dei nemici nel primo livello. */
   wildBaseLevel: 5,
-  /** Bonus di livello dei nemici nei nodi allenatore / palestra / élite. */
-  trainerLevelBonus: 2,
+  /** Bonus di livello dei nemici nei nodi sentinella / comandante / élite. */
+  sentinellaLevelBonus: 2,
   gymLevelBonus: 4,
   eliteLevelBonus: 6,
   championLevelBonus: 8,

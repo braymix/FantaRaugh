@@ -10,3 +10,18 @@ dev-dist
 
 # Cache di build di TypeScript: rigenerata a ogni build.
 *.tsbuildinfo
+
+# Firstmate: stato operativo privato del capitano, mai da versionare.
+projects/
+state/
+data/
+scratchpad*
+.no-mistakes/
+.lavish/
+.fm-secondmate-home
+.fm-secondmate-parent
+__pycache__/
+*.pyc
+.env
+config/
+.tools/

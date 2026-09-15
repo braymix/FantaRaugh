@@ -109,3 +109,12 @@ additiva, **97 test**, simulatore di run complete, PWA offline.
 
 **Non ancora**: Battle Tower come modalità separata, sfide giornaliere, account/cloud
 save, audio, acquisti reali.
+
+## Sviluppo con firstmate
+
+Questo repo raddoppia anche da casa operativa di [firstmate](https://github.com/kunchenguid/firstmate),
+l'agent distro che il capitano usa per far lavorare autonomamente una squadra di
+agenti di coding su questo progetto (spawn in worktree isolati, supervisione fino al
+completamento, PR o merge locali approvati). Non è parte del gioco: è tooling di
+sviluppo. Il punto di ingresso è [`AGENTS.md`](./AGENTS.md); `bin/`, `docs/`,
+`skills/` e `.agents/skills/` sono il suo tooling e le sue istruzioni interne.

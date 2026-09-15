@@ -201,7 +201,7 @@ function buildNode(rng: Rng, id: string, kind: NodeKind, layer: number, segment:
 
   switch (kind) {
     case 'wild':
-      // Nella prima tratta si è ancora soli: un solo avversario.
+      // Nel primo livello si è ancora soli: un solo avversario.
       encounter = pickEncounter(rng, segment === 0 ? 1 : rng.int(1, 2), level);
       break;
     case 'sentinella':
@@ -308,7 +308,7 @@ export function generateRunMap(seed: number): RunMap {
       for (let i = 0; i < width; i++) {
         const layer = layers.length;
         const id = `s${segment}_l${step}_${i}`;
-        // La primissima tappa offre sempre un Richiamo e uno scontro morbido: si
+        // La primissima stanza del dungeon offre sempre un Richiamo e uno scontro morbido: si
         // parte da soli, e trovare un secondo compagno non può dipendere dai dadi.
         const forced: NodeKind | null =
           segment === 0 && step === 0 ? (i === 0 ? 'ball' : i === 1 ? 'wild' : null) : null;

@@ -271,7 +271,7 @@ function ItemSlot({ uid, itemId }: { uid: string; itemId: string | null }) {
 /**
  * Deposito (1 posto). Salva una creatura dallo scarto, ma chi è in deposito NON
  * guadagna esperienza: resta indietro di livello. Lo scambio si decide prima di
- * entrare in un nodo, quindi va anticipato leggendo l'anteprima della tappa.
+ * entrare in una stanza, quindi va anticipato leggendo l'anteprima.
  */
 function DepositCard({
   swapping,

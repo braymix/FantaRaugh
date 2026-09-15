@@ -137,7 +137,7 @@ function FullRules() {
             C'è <b>un posto in deposito</b> per salvare una creatura dallo scarto. Chi è in deposito
             <b> riposa</b> (rientra a HP pieni) ma <b className="text-amber-200">non guadagna
             esperienza</b>: resta indietro di livello. Lo scambio si decide <b>prima</b> di entrare in
-            un nodo — leggi l'anteprima della tappa e anticipa (il comandante di fuoco si vede arrivare).
+            una stanza — leggi l'anteprima prima di entrare e anticipa (il comandante di fuoco si vede arrivare).
           </p>
         </Section>
 

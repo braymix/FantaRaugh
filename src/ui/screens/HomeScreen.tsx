@@ -17,14 +17,14 @@ export function HomeScreen() {
       <div>
         <h1 className="font-display text-4xl tracking-wide text-gold drop-shadow">Fantaraugh</h1>
         <p className="mt-1 text-xs text-white/50">
-          Recluta, evolvi, conquista 8 medaglie. Poi i Quattro Supremi e il Campione.
+          Recluta, evolvi, sconfiggi 7 comandanti. Poi i 3 leader e il Capo.
         </p>
       </div>
 
       <div className="card w-full max-w-xs text-left text-sm">
         <Row label="Essenze" value={`${profile.essence} ✦`} />
         <Row label="Record medaglie" value={`${profile.records.bestBadges}/${BALANCE.badgeCount}`} />
-        <Row label="Campione" value={`${profile.records.championWins}×`} />
+        <Row label="Capo sconfitto" value={`${profile.records.championWins}×`} />
         <Row label="Run tentate" value={`${profile.records.runs}`} />
         <Row label="Bestiario" value={`${profile.seen.length} creature`} />
       </div>

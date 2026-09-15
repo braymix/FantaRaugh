@@ -90,12 +90,12 @@ describe('combattimenti della run', () => {
     expect(after!).toBeLessThanOrEqual(full);
   });
 
-  it('le essenze premiano di più palestre e Campione', () => {
+  it('le essenze premiano di più comandanti e Boss', () => {
     const map = generateRunMap(3);
-    const gym = Object.values(map.nodes).find((n) => n.kind === 'gym')!;
+    const commander = Object.values(map.nodes).find((n) => n.kind === 'commander')!;
     const wild = Object.values(map.nodes).find((n) => n.kind === 'wild');
-    expect(essenceForNode(gym)).toBe(BALANCE.essencePerBadge);
-    expect(essenceForNode(map.nodes['champion']!)).toBe(BALANCE.essenceOnChampion);
-    if (wild) expect(essenceForNode(wild)).toBeLessThan(essenceForNode(gym));
+    expect(essenceForNode(commander)).toBe(BALANCE.essencePerBadge);
+    expect(essenceForNode(map.nodes['boss']!)).toBe(BALANCE.essenceOnChampion);
+    if (wild) expect(essenceForNode(wild)).toBeLessThan(essenceForNode(commander));
   });
 });

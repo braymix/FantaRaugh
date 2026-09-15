@@ -23,9 +23,9 @@ export type NodeKind =
   | 'tutor' // potenzia la mossa finale di una creatura
   | 'event' // evento incerto
   | 'ball' // recluta gratis una creatura tra alcune proposte
-  | 'gym' // palestra: medaglia
-  | 'elite' // Quattro Supremi
-  | 'champion'; // Campione
+  | 'commander' // comandante: medaglia
+  | 'elite' // Terzo, Braccio sin/dst
+  | 'boss'; // Capo del dungeon
 
 export interface EncounterRef {
   defId: string;
@@ -65,9 +65,9 @@ const KIND_TITLE: Record<NodeKind, string> = {
   tutor: 'Maestro di Mosse',
   event: 'Evento',
   ball: 'Richiamo',
-  gym: 'Palestra',
-  elite: 'Supremo',
-  champion: 'Campione',
+  commander: 'Comandante',
+  elite: 'Elite',
+  boss: 'Capo del Dungeon',
 };
 
 const KIND_DESC: Record<NodeKind, string> = {
@@ -79,12 +79,12 @@ const KIND_DESC: Record<NodeKind, string> = {
   tutor: 'Potenzia la mossa finale di una creatura.',
   event: 'Un bivio incerto: rischio e opportunità.',
   ball: 'Recluta gratis una creatura tra quelle proposte.',
-  gym: 'Il Capopalestra: squadra a tema, in gioco una medaglia.',
-  elite: 'Uno dei Quattro Supremi. Nessuna cura prima del prossimo.',
-  champion: 'Il Campione. La fine del viaggio.',
+  commander: 'Un comandante importante: in gioco una medaglia.',
+  elite: 'Uno dei leader del dungeon. Nessuna cura prima del prossimo.',
+  boss: 'Il capo supremo del dungeon. La fine della prova.',
 };
 
-/** Tipi tematici delle 8 palestre, in ordine di difficoltà crescente. */
+/** Tipi tematici dei 7 comandanti. In futuro customizzabile per avventura. */
 export const GYM_TYPES: MonType[] = [
   'natura',
   'acqua',
@@ -93,7 +93,6 @@ export const GYM_TYPES: MonType[] = [
   'roccia',
   'veleno',
   'ghiaccio',
-  'ombra',
 ];
 
 function shuffle<T>(arr: readonly T[], rng: Rng): T[] {
@@ -165,11 +164,11 @@ function levelFor(kind: NodeKind, segment: number): number {
   switch (kind) {
     case 'trainer':
       return base + BALANCE.trainerLevelBonus;
-    case 'gym':
+    case 'commander':
       return base + BALANCE.gymLevelBonus;
     case 'elite':
       return base + BALANCE.eliteLevelBonus;
-    case 'champion':
+    case 'boss':
       return base + BALANCE.championLevelBonus;
     default:
       return base;
@@ -178,11 +177,11 @@ function levelFor(kind: NodeKind, segment: number): number {
 
 function threatFor(kind: NodeKind): number {
   switch (kind) {
-    case 'champion':
+    case 'boss':
       return 5;
     case 'elite':
       return 5;
-    case 'gym':
+    case 'commander':
       return 4;
     case 'trainer':
       return 3;
@@ -208,7 +207,7 @@ function buildNode(rng: Rng, id: string, kind: NodeKind, layer: number, segment:
     case 'trainer':
       encounter = pickEncounter(rng, segment === 0 ? rng.int(1, 2) : rng.int(2, 3), level);
       break;
-    case 'gym': {
+    case 'commander': {
       gymType = GYM_TYPES[segment % GYM_TYPES.length];
       encounter = pickEncounter(rng, 3, level, gymType);
       break;
@@ -216,7 +215,7 @@ function buildNode(rng: Rng, id: string, kind: NodeKind, layer: number, segment:
     case 'elite':
       encounter = pickEncounter(rng, 4, level);
       break;
-    case 'champion':
+    case 'boss':
       encounter = [
         { defId: BOSS_ID, level: level + 2, row: 'back' },
         ...pickEncounter(rng, 3, level),
@@ -253,7 +252,16 @@ function buildNode(rng: Rng, id: string, kind: NodeKind, layer: number, segment:
     gymType,
     offers,
     preview: {
-      title: kind === 'gym' ? `Palestra ${gymType ?? ''}`.trim() : KIND_TITLE[kind],
+      title: (() => {
+        if (kind === 'commander') return `Comandante ${gymType ?? ''}`.trim();
+        if (kind === 'elite') {
+          const eliteNames = ['Terzo in comando', 'Braccio sinistro', 'Braccio destro'];
+          // segment è BALANCE.badgeCount + indice elite (0, 1, 2)
+          const idx = segment - BALANCE.badgeCount;
+          return eliteNames[idx] ?? 'Elite';
+        }
+        return KIND_TITLE[kind];
+      })(),
       description: KIND_DESC[kind],
       threat: threatFor(kind),
     },
@@ -292,7 +300,7 @@ export function generateRunMap(seed: number): RunMap {
 
   const pushLayer = (ids: string[]) => layers.push(ids);
 
-  // Otto tratte, ognuna chiusa da una palestra.
+  // Sette tratte, ognuna chiusa da un comandante.
   for (let segment = 0; segment < BALANCE.badgeCount; segment++) {
     for (let step = 0; step < BALANCE.nodesPerSegment; step++) {
       const width = rng.int(2, 3);
@@ -309,19 +317,19 @@ export function generateRunMap(seed: number): RunMap {
       }
       pushLayer(ids);
     }
-    const gymId = `gym${segment}`;
-    nodes[gymId] = buildNode(rng, gymId, 'gym', layers.length, segment);
-    pushLayer([gymId]);
+    const commanderId = `commander${segment}`;
+    nodes[commanderId] = buildNode(rng, commanderId, 'commander', layers.length, segment);
+    pushLayer([commanderId]);
   }
 
-  // Quattro Supremi (nessuna cura tra loro) e Campione.
-  for (let i = 0; i < 4; i++) {
+  // Tre leader (nessuna cura tra loro) e Capo del Dungeon.
+  for (let i = 0; i < 3; i++) {
     const id = `elite${i}`;
-    nodes[id] = buildNode(rng, id, 'elite', layers.length, BALANCE.badgeCount);
+    nodes[id] = buildNode(rng, id, 'elite', layers.length, BALANCE.badgeCount + i);
     pushLayer([id]);
   }
-  nodes['champion'] = buildNode(rng, 'champion', 'champion', layers.length, BALANCE.badgeCount);
-  pushLayer(['champion']);
+  nodes['boss'] = buildNode(rng, 'boss', 'boss', layers.length, BALANCE.badgeCount + 3);
+  pushLayer(['boss']);
 
   for (let l = 0; l < layers.length - 1; l++) link(nodes, layers[l]!, layers[l + 1]!, rng);
 

@@ -230,9 +230,9 @@ export const useGame = create<GameState>((set, get) => ({
       run.clearedNodeIds.push(nodeId);
       run.currentNodeId = nodeId;
 
-      if (node.kind === 'gym') run.badges += 1;
+      if (node.kind === 'commander') run.badges += 1;
       profile.records.bestBadges = Math.max(profile.records.bestBadges, run.badges);
-      if (node.kind === 'champion') {
+      if (node.kind === 'boss') {
         run.active = false;
         profile.records.championWins += 1;
       }

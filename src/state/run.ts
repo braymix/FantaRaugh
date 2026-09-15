@@ -102,8 +102,8 @@ export function xpForNode(node: MapNode): number {
 
 /** Essenze (valuta meta) guadagnate ripulendo un nodo. */
 export function essenceForNode(node: MapNode): number {
-  if (node.kind === 'champion') return BALANCE.essenceOnChampion;
-  if (node.kind === 'gym') return BALANCE.essencePerBadge;
+  if (node.kind === 'boss') return BALANCE.essenceOnChampion;
+  if (node.kind === 'commander') return BALANCE.essencePerBadge;
   return BALANCE.essencePerNode * Math.max(1, node.preview.threat);
 }
 

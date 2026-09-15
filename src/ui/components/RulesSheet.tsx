@@ -114,8 +114,8 @@ function FullRules() {
         <Section title="Il viaggio">
           <p>
             Scegli uno <b>starter</b>, poi percorri la mappa un nodo alla volta reclutando compagni
-            (max 5). Obiettivo: <b>8 medaglie</b>, poi i <b>Quattro Supremi</b> (senza cure tra loro)
-            e il <b>Campione</b>. Ogni scelta di percorso ha un costo: un oggetto è un allenatore in
+            (max 5). Obiettivo: <b>7 medaglie</b>, poi i <b>3 leader</b> (senza cure tra loro)
+            e il <b>Capo</b>. Ogni scelta di percorso ha un costo: un oggetto è un allenatore in
             meno, e quindi meno livelli.
           </p>
           <Row icon="⚔️" label="Selvatico" text="Vinci e puoi reclutare la creatura battuta." />
@@ -125,7 +125,7 @@ function FullRules() {
           <Row icon="🏕️" label="Rifugio" text="Cura tutta la squadra: gli HP NON si rigenerano da soli." />
           <Row icon="📜" label="Maestro" text="Potenzia la mossa finale di una creatura (tier 1→3)." />
           <Row icon="🔄" label="Scambio" text="Cedi una creatura per una di livello superiore." />
-          <Row icon="🏅" label="Palestra" text="Squadra a tema di un tipo: qui la copertura decide." />
+          <Row icon="🏅" label="Comandante" text="Leader di una regione: qui la copertura decide." />
         </Section>
 
         <Section title="Squadra e deposito">
@@ -137,7 +137,7 @@ function FullRules() {
             C'è <b>un posto in deposito</b> per salvare una creatura dallo scarto. Chi è in deposito
             <b> riposa</b> (rientra a HP pieni) ma <b className="text-amber-200">non guadagna
             esperienza</b>: resta indietro di livello. Lo scambio si decide <b>prima</b> di entrare in
-            un nodo — leggi l'anteprima della tappa e anticipa (la palestra di fuoco si vede arrivare).
+            un nodo — leggi l'anteprima della tappa e anticipa (il comandante di fuoco si vede arrivare).
           </p>
         </Section>
 
@@ -150,7 +150,7 @@ function FullRules() {
           </p>
           <p>
             Nella schermata Squadra c'è l'<b>analizzatore di debolezze</b>: se tre membri temono lo
-            stesso tipo, la palestra di quel tipo può spazzarti via. Specializzarsi conviene (i
+            stesso tipo, il comandante di quel tipo può spazzarti via. Specializzarsi conviene (i
             <b> tratti</b> danno bonus a chi condivide un tipo) ma espone: è la tensione centrale.
           </p>
         </Section>

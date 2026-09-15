@@ -12,26 +12,26 @@ describe('mappa della run', () => {
     expect(JSON.stringify(generateRunMap(1).nodes)).not.toBe(JSON.stringify(generateRunMap(2).nodes));
   });
 
-  it('contiene 8 palestre, i Quattro Supremi e il Campione', () => {
+  it('contiene 7 comandanti, i 3 leader e il Capo', () => {
     const m = generateRunMap(42);
     const kinds = Object.values(m.nodes).map((n) => n.kind);
-    expect(kinds.filter((k) => k === 'gym')).toHaveLength(BALANCE.badgeCount);
-    expect(kinds.filter((k) => k === 'elite')).toHaveLength(4);
-    expect(kinds.filter((k) => k === 'champion')).toHaveLength(1);
-    // Il Campione è l'ultima tappa.
-    expect(m.layers.at(-1)).toEqual(['champion']);
+    expect(kinds.filter((k) => k === 'commander')).toHaveLength(BALANCE.badgeCount);
+    expect(kinds.filter((k) => k === 'elite')).toHaveLength(3);
+    expect(kinds.filter((k) => k === 'boss')).toHaveLength(1);
+    // Il Capo è l'ultima tappa.
+    expect(m.layers.at(-1)).toEqual(['boss']);
   });
 
-  it('ogni palestra ha un tipo tematico e nemici che lo possiedono', () => {
+  it('ogni comandante ha un tipo tematico e nemici che lo possiedono', () => {
     const m = generateRunMap(9);
-    const gyms = Object.values(m.nodes).filter((n) => n.kind === 'gym');
-    for (const gym of gyms) {
-      expect(gym.gymType).toBeDefined();
-      expect(GYM_TYPES).toContain(gym.gymType!);
-      const hasThemed = gym.encounter.some((e) => {
+    const commanders = Object.values(m.nodes).filter((n) => n.kind === 'commander');
+    for (const commander of commanders) {
+      expect(commander.gymType).toBeDefined();
+      expect(GYM_TYPES).toContain(commander.gymType!);
+      const hasThemed = commander.encounter.some((e) => {
         // Il tipo può comparire in un qualunque stadio della linea.
         const def = CREATURE_MAP[e.defId]!;
-        return def.types.includes(gym.gymType!) || def.line.length > 0;
+        return def.types.includes(commander.gymType!) || def.line.length > 0;
       });
       expect(hasThemed).toBe(true);
     }
@@ -49,9 +49,9 @@ describe('mappa della run', () => {
 
   it('il livello dei nemici cresce col progredire delle tratte', () => {
     const m = generateRunMap(5);
-    const firstGym = Object.values(m.nodes).find((n) => n.kind === 'gym' && n.segment === 0)!;
-    const lastGym = Object.values(m.nodes).find((n) => n.kind === 'gym' && n.segment === 7)!;
-    expect(lastGym.level).toBeGreaterThan(firstGym.level);
+    const firstCommander = Object.values(m.nodes).find((n) => n.kind === 'commander' && n.segment === 0)!;
+    const lastCommander = Object.values(m.nodes).find((n) => n.kind === 'commander' && n.segment === 6)!;
+    expect(lastCommander.level).toBeGreaterThan(firstCommander.level);
   });
 
   it('i nodi oggetto e richiamo propongono più opzioni', () => {

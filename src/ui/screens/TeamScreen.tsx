@@ -71,7 +71,7 @@ export function TeamScreen() {
             </div>
           )}
           <div className="mt-1 text-[9px] leading-snug text-white/35">
-            Quanti membri prendono danno aumentato da quel tipo. Una palestra a tema può spazzarti via.
+            Quanti membri prendono danno aumentato da quel tipo. Un comandante a tema può spazzarti via.
           </div>
         </div>
 

@@ -65,7 +65,7 @@ export const TUTORIAL_STEPS: Step[] = [
   {
     icon: '🏅',
     title: 'Le medaglie',
-    lines: ['Devi vincere 8 palestre.', 'Ogni palestra dà una medaglia.', 'Poi arrivano 4 campioni.', 'E alla fine il Capo 🐉'],
+    lines: ['Devi sconfiggere 7 comandanti.', 'Ogni comandante dà una medaglia.', 'Poi i 3 leader del dungeon.', 'E alla fine il Capo 🐉'],
   },
   {
     icon: '✦',

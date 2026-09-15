@@ -99,7 +99,7 @@ function playRun(starterId: string, seed: number): RunReport {
       }
       grantTeamXp(run.team, xpForNode(node));
       essence += essenceForNode(node);
-      if (node.kind === 'gym') run.badges += 1;
+      if (node.kind === 'commander') run.badges += 1;
       // Reclutamento automatico dopo una selvatica, se c'è posto.
       if (node.kind === 'wild' && node.encounter[0] && run.team.length < BALANCE.maxRecruits) {
         const mon = makeRunMon(node.encounter[0].defId, Math.max(1, node.level - BALANCE.recruitLevelPenalty));
@@ -109,7 +109,7 @@ function playRun(starterId: string, seed: number): RunReport {
       run.clearedNodeIds.push(nextId);
       run.currentNodeId = nextId;
       nodes++;
-      if (node.kind === 'champion') {
+      if (node.kind === 'boss') {
         return { badges: run.badges, nodes, champion: true, essence, damageByRole };
       }
     } else {

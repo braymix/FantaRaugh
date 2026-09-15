@@ -59,9 +59,9 @@ export const BALANCE = {
   // --- Struttura della run (stile Pokelike) ---
   /** Livello dello starter a inizio run. */
   starterLevel: 5,
-  /** Medaglie da conquistare prima dei Quattro Supremi. */
-  badgeCount: 8,
-  /** Nodi (oltre alla palestra) in ogni tratta verso una medaglia. */
+  /** Medaglie da conquistare prima dei tre leader e del capo. */
+  badgeCount: 7,
+  /** Nodi (oltre al comandante) in ogni tratta verso una medaglia. */
   nodesPerSegment: 3,
   /** Quanto sale il livello dei nemici per ogni medaglia conquistata. */
   levelPerBadge: 3,

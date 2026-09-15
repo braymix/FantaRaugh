@@ -24,9 +24,9 @@ const KIND_ICON: Record<NodeKind, string> = {
   tutor: '📜',
   event: '❓',
   ball: '🔮',
-  gym: '🏅',
+  commander: '🏅',
   elite: '👑',
-  champion: '🐉',
+  boss: '🐉',
 };
 
 export function MapScreen() {

@@ -6,6 +6,7 @@
  * di comandanti più 3 leader e il capo finale.
  */
 
+import { useLayoutEffect, useRef, useState } from 'react';
 import { BALANCE } from '@content/balance';
 import { CREATURE_MAP } from '@content/creatures';
 import { ITEM_MAP } from '@content/items';
@@ -52,6 +53,42 @@ export function MapScreen() {
 
   const totalLayers = map.layers.length;
 
+  const spineRef = useRef<HTMLDivElement | null>(null);
+  const nodeRefs = useRef(new Map<string, HTMLButtonElement | null>());
+  const [links, setLinks] = useState<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
+
+  useLayoutEffect(() => {
+    const computeLinks = () => {
+      const spine = spineRef.current;
+      if (!spine) return;
+      const spineRect = spine.getBoundingClientRect();
+      const next: { x1: number; y1: number; x2: number; y2: number }[] = [];
+      for (const layer of visible) {
+        for (const nid of layer) {
+          if (!selectable.has(nid)) continue;
+          const fromEl = nodeRefs.current.get(nid);
+          if (!fromEl) continue;
+          const fromRect = fromEl.getBoundingClientRect();
+          for (const targetId of map.nodes[nid]!.next) {
+            const toEl = nodeRefs.current.get(targetId);
+            if (!toEl) continue;
+            const toRect = toEl.getBoundingClientRect();
+            next.push({
+              x1: fromRect.left + fromRect.width / 2 - spineRect.left,
+              y1: fromRect.bottom - spineRect.top,
+              x2: toRect.left + toRect.width / 2 - spineRect.left,
+              y2: toRect.top - spineRect.top,
+            });
+          }
+        }
+      }
+      setLinks(next);
+    };
+    computeLinks();
+    window.addEventListener('resize', computeLinks);
+    return () => window.removeEventListener('resize', computeLinks);
+  }, [map, run.currentNodeId, from, to]);
+
   return (
     <div className="flex h-full flex-col bg-dungeon">
       <div className="flex items-center justify-between border-b-2 border-black/60 bg-night-900/90 p-3">
@@ -75,7 +112,22 @@ export function MapScreen() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="dungeon-spine mx-auto flex max-w-md flex-col items-stretch gap-5">
+        <div ref={spineRef} className="dungeon-spine relative mx-auto flex max-w-md flex-col items-stretch gap-5">
+          <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
+            {links.map((l, i) => (
+              <line
+                key={i}
+                x1={l.x1}
+                y1={l.y1}
+                x2={l.x2}
+                y2={l.y2}
+                stroke="#e0562d"
+                strokeOpacity={0.55}
+                strokeWidth={2}
+                strokeDasharray="4 3"
+              />
+            ))}
+          </svg>
           {visible.map((layer, i) => {
             const layerIndex = from + i;
             const isCurrent = layerIndex === currentLayer;
@@ -101,6 +153,7 @@ export function MapScreen() {
                       selectable={selectable.has(nid)}
                       cleared={cleared.has(nid)}
                       onEnter={() => enterNode(nid)}
+                      cardRef={(el) => nodeRefs.current.set(nid, el)}
                     />
                   ))}
                 </div>
@@ -171,14 +224,17 @@ function NodeCard({
   selectable,
   cleared,
   onEnter,
+  cardRef,
 }: {
   node: MapNode;
   selectable: boolean;
   cleared: boolean;
   onEnter: () => void;
+  cardRef?: (el: HTMLButtonElement | null) => void;
 }) {
   return (
     <button
+      ref={cardRef}
       onClick={selectable ? onEnter : undefined}
       disabled={!selectable}
       className={`relative w-[112px] rounded-t-lg border-2 border-b-4 px-1.5 pb-1.5 pt-2 text-left transition ${

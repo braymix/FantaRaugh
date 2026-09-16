@@ -139,17 +139,21 @@ export const useGame = create<GameState>((set, get) => ({
 
     if (!get().cloudAvailable) return;
     // Sessione già presente (refresh pagina): riconcilia subito col cloud.
-    getSession().then(async (session) => {
+    getSession().then((session) => {
       if (!session) return;
+      set({ user: session.user });
       const preReconcile = get().profile;
-      const reconciled = await reconcileOnSignIn(session.user.id, preReconcile);
-      if (get().profile !== preReconcile) {
-        set({ user: session.user, reconciledUserId: session.user.id });
-        return;
-      }
-      const reconciledMap = reconciled.run?.active ? generateRunMap(reconciled.run.seed) : null;
-      saveProfile(get().storage, reconciled);
-      set({ user: session.user, reconciledUserId: session.user.id, profile: reconciled, map: reconciledMap });
+      reconcileOnSignIn(session.user.id, preReconcile)
+        .then((reconciled) => {
+          if (get().profile !== preReconcile) {
+            set({ reconciledUserId: session.user.id });
+            return;
+          }
+          const reconciledMap = reconciled.run?.active ? generateRunMap(reconciled.run.seed) : null;
+          saveProfile(get().storage, reconciled);
+          set({ reconciledUserId: session.user.id, profile: reconciled, map: reconciledMap });
+        })
+        .catch(() => {});
     });
     onAuthStateChange((session) => {
       set({ user: session?.user ?? null });
@@ -582,21 +586,24 @@ export const useGame = create<GameState>((set, get) => ({
     }
     const session = await getSession();
     if (session) {
+      set({ user: session.user });
       const preReconcile = get().profile;
-      const reconciled = await reconcileOnSignIn(session.user.id, preReconcile);
-      if (get().profile !== preReconcile) {
-        set({ user: session.user, reconciledUserId: session.user.id, toast: 'Accesso effettuato: salvataggio sincronizzato.' });
-      } else {
-        const reconciledMap = reconciled.run?.active ? generateRunMap(reconciled.run.seed) : null;
-        saveProfile(get().storage, reconciled);
-        set({
-          user: session.user,
-          reconciledUserId: session.user.id,
-          profile: reconciled,
-          map: reconciledMap,
-          toast: 'Accesso effettuato: salvataggio sincronizzato.',
-        });
-      }
+      await reconcileOnSignIn(session.user.id, preReconcile)
+        .then((reconciled) => {
+          if (get().profile !== preReconcile) {
+            set({ reconciledUserId: session.user.id, toast: 'Accesso effettuato: salvataggio sincronizzato.' });
+            return;
+          }
+          const reconciledMap = reconciled.run?.active ? generateRunMap(reconciled.run.seed) : null;
+          saveProfile(get().storage, reconciled);
+          set({
+            reconciledUserId: session.user.id,
+            profile: reconciled,
+            map: reconciledMap,
+            toast: 'Accesso effettuato: salvataggio sincronizzato.',
+          });
+        })
+        .catch(() => set({ toast: 'Accesso effettuato, ma la sincronizzazione col cloud non è riuscita.' }));
     }
     set({ authBusy: false });
   },

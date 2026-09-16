@@ -55,12 +55,7 @@ export function queuePushCloudProfile(userId: string, profile: MetaProfile): voi
  * (cloud se trovato, altrimenti quello locale passato in input).
  */
 export async function reconcileOnSignIn(userId: string, localProfile: MetaProfile): Promise<MetaProfile> {
-  let cloudProfile: MetaProfile | null;
-  try {
-    cloudProfile = await pullCloudProfile(userId);
-  } catch {
-    return localProfile;
-  }
+  const cloudProfile = await pullCloudProfile(userId);
   if (cloudProfile) return cloudProfile;
   await pushCloudProfile(userId, localProfile);
   return localProfile;

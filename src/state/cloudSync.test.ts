@@ -68,12 +68,11 @@ describe('cloud sync (Supabase mockato)', () => {
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }));
   });
 
-  it('reconcileOnSignIn: se la pull fallisce, non sovrascrive il cloud col locale', async () => {
+  it('reconcileOnSignIn: se la pull fallisce, propaga l\'errore invece di forzare un push locale', async () => {
     maybeSingle.mockResolvedValueOnce({ data: null, error: new Error('network blip') });
     const local = createMetaProfile();
     local.essence = 55;
-    const result = await reconcileOnSignIn('user-1', local);
-    expect(result.essence).toBe(55);
+    await expect(reconcileOnSignIn('user-1', local)).rejects.toThrow('network blip');
     expect(upsert).not.toHaveBeenCalled();
   });
 });

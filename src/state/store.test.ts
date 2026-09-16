@@ -91,4 +91,21 @@ describe('store: riconciliazione al login e mappa', () => {
     expect(useGame.getState().profile.run?.currentNodeId).toBe(edge.to);
     expect(useGame.getState().profile.run?.clearedNodeIds).toContain(edge.to);
   });
+
+  it('authSignIn: se la riconciliazione fallisce, persist() non forza un push col profilo forse stale', async () => {
+    const localProfile: MetaProfile = { ...createMetaProfile() };
+    useGame.setState({ profile: localProfile, map: null, user: null, reconciledUserId: null });
+
+    signIn.mockResolvedValueOnce({ ok: true });
+    getSession.mockResolvedValueOnce({ user: { id: 'user-1' } });
+    reconcileOnSignIn.mockRejectedValueOnce(new Error('network blip'));
+
+    await useGame.getState().authSignIn('a@b.com', 'password123');
+
+    expect(useGame.getState().user?.id).toBe('user-1');
+    expect(useGame.getState().reconciledUserId).toBeNull();
+
+    useGame.getState().persist();
+    expect(queuePushCloudProfile).not.toHaveBeenCalled();
+  });
 });

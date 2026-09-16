@@ -20,7 +20,8 @@ export async function pullCloudProfile(userId: string): Promise<MetaProfile | nu
   const supabase = getSupabase();
   if (!supabase) return null;
   const { data, error } = await supabase.from(TABLE).select('data').eq('user_id', userId).maybeSingle();
-  if (error || !data) return null;
+  if (error) throw error;
+  if (!data) return null;
   return data.data as MetaProfile;
 }
 
@@ -54,7 +55,12 @@ export function queuePushCloudProfile(userId: string, profile: MetaProfile): voi
  * (cloud se trovato, altrimenti quello locale passato in input).
  */
 export async function reconcileOnSignIn(userId: string, localProfile: MetaProfile): Promise<MetaProfile> {
-  const cloudProfile = await pullCloudProfile(userId);
+  let cloudProfile: MetaProfile | null;
+  try {
+    cloudProfile = await pullCloudProfile(userId);
+  } catch {
+    return localProfile;
+  }
   if (cloudProfile) return cloudProfile;
   await pushCloudProfile(userId, localProfile);
   return localProfile;

@@ -33,6 +33,11 @@ describe('cloud sync (Supabase mockato)', () => {
     expect(result?.essence).toBe(42);
   });
 
+  it('pullCloudProfile propaga un errore di query invece di trattarlo come riga assente', async () => {
+    maybeSingle.mockResolvedValueOnce({ data: null, error: new Error('network blip') });
+    await expect(pullCloudProfile('user-1')).rejects.toThrow('network blip');
+  });
+
   it('pushCloudProfile fa upsert con user_id e data', async () => {
     upsert.mockResolvedValueOnce({ error: null });
     const profile = createMetaProfile();
@@ -61,5 +66,14 @@ describe('cloud sync (Supabase mockato)', () => {
     const result = await reconcileOnSignIn('user-1', local);
     expect(result.essence).toBe(55);
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }));
+  });
+
+  it('reconcileOnSignIn: se la pull fallisce, non sovrascrive il cloud col locale', async () => {
+    maybeSingle.mockResolvedValueOnce({ data: null, error: new Error('network blip') });
+    const local = createMetaProfile();
+    local.essence = 55;
+    const result = await reconcileOnSignIn('user-1', local);
+    expect(result.essence).toBe(55);
+    expect(upsert).not.toHaveBeenCalled();
   });
 });

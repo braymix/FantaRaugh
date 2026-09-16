@@ -17,7 +17,7 @@ fight. Web app (PWA), mobile-first, estetica **pixel-art**, offline-ready.
 ```bash
 npm install
 npm run dev        # sviluppo (Vite)
-npm test           # test unitari (Vitest) — 98 test, incluso il determinismo
+npm test           # test unitari (Vitest) — 111 test, incluso il determinismo
 npm run sim -- 25    # simula run complete e riporta medaglie/nodi per starter
 npm run build      # build di produzione + service worker PWA
 npm run preview    # anteprima della build
@@ -106,7 +106,7 @@ con 8 palestre a tema + Quattro Supremi + Campione, reclutamenti/scambi/maestro 
 mosse, deposito da 1 posto, Nuzlocke, metaprogressione con potenziamenti di linea e
 tratti di tipo, sprite pixel procedurali, analizzatore di debolezze, tutorial
 guidato + regole complete in due livelli, salvataggio localStorage con migrazione
-additiva, login e salvataggio cloud opzionali (Supabase), **108 test**, simulatore
+additiva, login e salvataggio cloud opzionali (Supabase), **111 test**, simulatore
 di run complete, PWA offline.
 
 **Non ancora**: Battle Tower come modalità separata, sfide giornaliere, audio,
